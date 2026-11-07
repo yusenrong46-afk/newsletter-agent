@@ -1,0 +1,44 @@
+[project]
+name = "newsletter-agent"
+version = "0.1.0"
+description = "Inventory the newsletters in your Gmail and get a daily briefing. Read-only, local, budget-capped."
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [
+    { name = "Yusen Rong", email = "230053335+yusenrong46-afk@users.noreply.github.com" }
+]
+requires-python = ">=3.11"
+keywords = ["gmail", "newsletter", "mcp", "openai", "cli"]
+classifiers = [
+    "Environment :: Console",
+    "Operating System :: MacOS",
+    "Programming Language :: Python :: 3",
+    "Topic :: Communications :: Email",
+]
+dependencies = [
+    "google-api-python-client>=2,<3",
+    "google-auth-oauthlib>=1.2,<2",
+    "mcp>=1.20,<2",
+    "openai>=3.42.1",
+    "pydantic>=2.14.2",
+]
+
+[project.urls]
+Homepage = "https://github.com/yusenrong46-afk/newsletter-agent"
+Demo = "https://yusenrong46-afk.github.io/newsletter-agent/"
+
+[project.scripts]
+newsletter-agent = "newsletter_agent.cli:main"
+
+[build-system]
+requires = ["uv_build>=0.12.23,<0.13.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.2.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

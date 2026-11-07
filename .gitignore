@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+.venv
+.pytest_cache/
+
+# Private data: never commit credentials, caches, reports, or briefings
+.env
+.env.*
+.gmail/
+.inventory/
+.newsletter-agent/
+client_secret*.json
+token.json
+*.plist
+
+# Generated demo site (CI builds it)
+site/
+
+# Editors and OS
+.DS_Store
+.vscode/
+.idea/

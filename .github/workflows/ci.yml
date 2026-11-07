@@ -1,0 +1,47 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: ["3.11", "3.13"]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Install
+        run: uv sync --locked
+      - name: Tests (offline, synthetic email only)
+        run: uv run pytest -q
+      - name: Demo smoke test
+        run: uv run newsletter-agent demo --output site
+      - name: Upload demo site
+        if: matrix.python == '3.13'
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: site
+
+  deploy-demo:
+    # Publishes the synthetic demo report to GitHub Pages. No real email is involved.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5
