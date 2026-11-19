@@ -7,6 +7,8 @@ demo module) and OpenAI (FakeOpenAI below). No test contacts Gmail or OpenAI.
 
 import asyncio
 import json
+import threading
+import time
 from datetime import UTC, datetime
 from types import SimpleNamespace
 
@@ -39,6 +41,35 @@ def newsletter(message_id, list_id="weekly.example.com", **kwargs):
 
 def many_newsletters(count):
     return [newsletter(f"m{i:03}") for i in range(count)]
+
+
+class SlowGmail(SyntheticGmail):
+    """SyntheticGmail with a delay per message read; records how many reads overlap."""
+
+    def __init__(self, messages=(), latency=0.005, page_size=2, pages=None):
+        super().__init__(messages, pages=pages, page_size=page_size)
+        self.latency = latency
+        self.in_flight = 0
+        self.peak_in_flight = 0
+        self._lock = threading.Lock()
+
+    def get(self, userId, id, format, metadataHeaders=None):
+        request = super().get(userId, id, format, metadataHeaders)
+        inner = request.action
+
+        def action():
+            with self._lock:
+                self.in_flight += 1
+                self.peak_in_flight = max(self.peak_in_flight, self.in_flight)
+            try:
+                time.sleep(self.latency)
+                return inner()
+            finally:
+                with self._lock:
+                    self.in_flight -= 1
+
+        request.action = action
+        return request
 
 
 def fake_gmail(messages=(), pages=None):

@@ -30,8 +30,8 @@ Everything is in `~/.newsletter-agent/`, or the folder set by `NEWSLETTER_AGENT_
 | Path | Contents |
 |---|---|
 | `credentials/` | Your OAuth client, Gmail token, and OpenAI key |
-| `inventory/metadata_cache.json` | Sender, subject, date, labels, and List-ID. `List-Unsubscribe` is stored only as yes/no, because the URL is often personal |
-| `inventory/classification_cache.json` | Labels, publication names, and short rationales |
+| `inventory/newsletter.db` | A SQLite database (plus its `-wal`/`-shm` files) with three tables: **metadata** (sender, subject, date, labels, and List-ID; `List-Unsubscribe` is stored only as yes/no, because the URL is often personal), **classifications** (labels, publication names, and short rationales), and **kv** (checkpoints for `--resume`). Records older than `retention_days` (default 180) are deleted after a complete scan, but never inside the window of a saved inventory or briefing |
+| `inventory/*.json.migrated` | Backups of the JSON caches used by version 0.1, kept after their one-time import into `newsletter.db`. Safe to delete |
 | `inventory/reports/` | JSON, Markdown, and HTML reports |
 | `briefings/` | Briefing pages: summaries, plus the subjects of their sources |
 | `logs/` | Output from scheduled briefings (counts, no email content) |

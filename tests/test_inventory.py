@@ -287,7 +287,8 @@ def test_connection_failure_while_closing_does_not_hide_a_saved_report(monkeypat
 
     monkeypatch.setattr(inventory, "open_gmail_client", closes_badly)
     monkeypatch.setattr(inventory, "run_inventory", finished_inventory)
-    monkeypatch.setattr(inventory, "InventoryStore", lambda: SimpleNamespace(lock=lambda: None, unlock=lambda: None))
+    fake_store = SimpleNamespace(lock=lambda: None, unlock=lambda: None, close=lambda: None)
+    monkeypatch.setattr(inventory, "InventoryStore", lambda: fake_store)
     report = asyncio.run(inventory.inventory_with_real_gmail(InventoryOptions()))
     assert report["run"]["status"] == "interrupted"
 
@@ -401,10 +402,11 @@ def test_private_files_have_no_bodies_or_unsubscribe_urls_and_restricted_modes(t
     report, fake = run_workflow(tmp_path, fake_gmail([newsletter("a", body="BODY-SECRET-TEXT")]))
     directory = tmp_path / "inventory"
     files = [path for path in directory.rglob("*") if path.is_file() and path.name != ".lock"]
-    assert len(files) >= 6  # caches, checkpoint, and the json/md/html report
+    assert {path.name for path in files} >= {"newsletter.db"}
+    assert len(files) >= 4  # the database and the json/md/html report
     for path in files:
-        text = path.read_text()
-        assert "BODY-SECRET-TEXT" not in text and "SECRET-TOKEN" not in text
+        data = path.read_bytes()  # Raw bytes, so the binary database is checked too.
+        assert b"BODY-SECRET-TEXT" not in data and b"SECRET-TOKEN" not in data
         assert stat.S_IMODE(path.stat().st_mode) == 0o600
     assert stat.S_IMODE(directory.stat().st_mode) == 0o700
     assert "SECRET-TOKEN" not in fake.calls[0]["input"]

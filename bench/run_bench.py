@@ -223,6 +223,16 @@ def bench_disk_and_rerun(messages: int) -> tuple[dict, dict]:
     return disk, rerun
 
 
+def bench_disk_scaling(sizes: tuple[int, ...]) -> list[dict]:
+    """Bytes written by a first scan at several mailbox sizes (shows how the cost grows)."""
+    rows = []
+    for size in sizes:
+        disk, _ = bench_disk_and_rerun(size)
+        rows.append({"messages": size, "bytes_written": disk["bytes_written"],
+                     "whole_file_rewrites": disk["whole_file_rewrites"], "seconds": disk["seconds"]})
+    return rows
+
+
 def demo_answers() -> dict:
     """The numbers the upgrade must not change: the demo pipeline with a fixed date."""
     from newsletter_agent.demo import run_demo_async
@@ -316,6 +326,8 @@ def main(argv=None) -> int:
     results["full_run"] = bench_full_run(full_messages, latency_ms=30)
     step("disk writes and cached rerun")
     results["disk"], results["rerun"] = bench_disk_and_rerun(disk_messages)
+    step("disk scaling")
+    results["disk_scaling"] = bench_disk_scaling((300, 600) if args.quick else (1000, 5000, 20000))
     step("demo answers")
     results["answers"] = demo_answers()
     if not args.skip_code_health:

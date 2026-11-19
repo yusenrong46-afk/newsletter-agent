@@ -436,6 +436,7 @@ async def briefing_with_real_gmail(settings: dict, approved: bool) -> dict:
             raise
     finally:
         store.unlock()
+        store.close()
     return briefing
 
 

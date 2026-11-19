@@ -27,6 +27,9 @@ MODEL = "gpt-6-luna"
 
 DEFAULT_CONFIG: dict[str, Any] = {
     "display_timezone": "",  # Empty means this computer's time zone.
+    # Header records and labels older than this are deleted from the cache, but never
+    # inside the window of a saved inventory or briefing.
+    "retention_days": 180,
     "briefing": {
         "time": "07:00",
         "categories": ["editorial_newsletter"],
@@ -93,12 +96,14 @@ def load_config() -> dict:
     """Read config.toml on top of the defaults. A missing file means all defaults."""
     config: dict[str, Any] = {
         "display_timezone": DEFAULT_CONFIG["display_timezone"],
+        "retention_days": DEFAULT_CONFIG["retention_days"],
         "briefing": dict(DEFAULT_CONFIG["briefing"]),
     }
     path = app_home() / "config.toml"
     if path.exists():
         saved = tomllib.loads(path.read_text(encoding="utf-8"))
         config["display_timezone"] = saved.get("display_timezone", config["display_timezone"])
+        config["retention_days"] = int(saved.get("retention_days", config["retention_days"]))
         config["briefing"].update(saved.get("briefing", {}))
     return config
 
@@ -115,7 +120,12 @@ def toml_value(value) -> str:
 
 
 def save_config(config: dict):
-    lines = [f"display_timezone = {toml_value(config['display_timezone'])}", "", "[briefing]"]
+    lines = [
+        f"display_timezone = {toml_value(config['display_timezone'])}",
+        f"retention_days = {toml_value(config.get('retention_days', DEFAULT_CONFIG['retention_days']))}",
+        "",
+        "[briefing]",
+    ]
     lines += [f"{key} = {toml_value(value)}" for key, value in config["briefing"].items()]
     private_dir()
     write_private_file(app_home() / "config.toml", "\n".join(lines) + "\n")

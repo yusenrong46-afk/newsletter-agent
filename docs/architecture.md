@@ -6,6 +6,7 @@
 |---|---|
 | `cli.py` | The `newsletter-agent` command and subcommands |
 | `config.py` | Data folder, `config.toml`, OpenAI key, private atomic file writes |
+| `store.py` | SQLite caches and checkpoints, migration from v0.1 JSON, retention, the run lock |
 | `gmail_server.py` | **The only code that uses Google's libraries.** OAuth, the two MCP tools, MIME → text |
 | `gmail_client.py` | MCP client over stdio; turns tool results into small message records |
 | `scan.py` | Freeze the window, list every page, read metadata, triage, refresh unread flags |
@@ -44,7 +45,10 @@
 
 ## Checkpoints and resume
 
-- **Saving:** state is saved after every page and every batch, with an atomic write (temporary file plus `os.replace`).
+- **Saving:** caches and checkpoints live in one SQLite database (`inventory/newsletter.db`, WAL mode, `synchronous=FULL`). Each page and each batch is one committed transaction, so a crash or a hard kill loses at most the page or batch in progress, and the database is never left half-written. Version 0.1 rewrote whole JSON files after every page, which grew with the square of the mailbox size.
+- **Upgrading:** v0.1's JSON caches are imported once and renamed to `*.json.migrated`, so an upgrade never re-reads Gmail or re-bills the model.
+- **Corruption:** an unreadable database is moved aside to `newsletter.db.corrupt-<time>` with a warning, and the caches are rebuilt.
+- **Retention:** after a complete listing, header records and labels older than `retention_days` (default 180) are deleted, except inside any saved checkpoint's window.
 - **Resume:** `--resume` keeps the frozen window and lists the mailbox again from page one, because an old page token may be invalid. It reuses cached metadata and classifications, and removes messages that disappeared since the last run.
 - **Ctrl-C:** it arrives as a task cancellation. The run saves a partial report, and the MCP subprocess is shut down.
 - **Concurrent runs:** a lock file stops two runs (for example a scheduled briefing and a manual inventory) from sharing the caches at the same time.

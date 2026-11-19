@@ -154,5 +154,25 @@
    "ruff": "ruff 0.17.6 --line-length 120 --select E,F,W,B,UP,SIM,I --target-version py311",
    "mypy": "mypy 2.4.1 --python-version 3.11 --check-untyped-defs --ignore-missing-imports"
   }
- }
+ },
+ "disk_scaling": [
+  {
+   "messages": 1000,
+   "bytes_written": 1589037,
+   "whole_file_rewrites": 9,
+   "seconds": 0.75
+  },
+  {
+   "messages": 5000,
+   "bytes_written": 17042371,
+   "whole_file_rewrites": 25,
+   "seconds": 3.15
+  },
+  {
+   "messages": 20000,
+   "bytes_written": 204697393,
+   "whole_file_rewrites": 85,
+   "seconds": 12.5
+  }
+ ]
 }

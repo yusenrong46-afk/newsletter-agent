@@ -9,6 +9,7 @@ import sys
 from collections.abc import Callable
 from datetime import UTC, datetime
 
+from . import config
 from .classify import (
     ModelClient,
     build_preflight,
@@ -38,6 +39,9 @@ def finish_run(run: InventoryRun, demo: bool = False) -> dict:
     run.store.save_classifications()
     run.save_checkpoint()
     report = build_report(run)
+    if run.listing_complete:
+        # Only a complete listing shows the full picture; never prune after a partial one.
+        run.store.prune(run.state.window_end_ms, config.load_config()["retention_days"])
     if run.options.quiet:
         return report
     text = render_report(report)
@@ -107,6 +111,7 @@ async def inventory_with_real_gmail(options: InventoryOptions) -> dict:
             raise
     finally:
         store.unlock()
+        store.close()
     return report
 
 
