@@ -65,6 +65,7 @@ You bring your own Google OAuth client and OpenAI key, so your email never passe
 | `schedule HH:MM` / `unschedule` | Daily briefing with launchd, after explicit consent |
 | `chat` | Asks about your newsletters |
 | `demo [--open] [--real-model]` | Synthetic mailbox, real pipeline |
+| `eval [--real-model]` | Scores classification on 96 labelled synthetic emails |
 
 ## How it works
 

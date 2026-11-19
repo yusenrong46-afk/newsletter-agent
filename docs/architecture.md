@@ -18,6 +18,7 @@
 | `chat.py` | Chat with three local read-only tools |
 | `schedule.py` | launchd install/remove after consent |
 | `demo.py` | Synthetic mailbox, offline model stand-in, demo site |
+| `evaluate.py` | The quality eval: labelled synthetic dataset (`eval_data/dataset.jsonl`), scoring, results page |
 
 ## Inventory flow
 
@@ -67,3 +68,15 @@
 ## Testing
 
 `uv run pytest` runs entirely offline. The workflow tests use the **real** FastMCP server and protocol, connected in memory to `SyntheticGmail` (a stand-in for Google's client), and a fake OpenAI client. A few tests run the installed OpenAI SDK against a local `httpx.MockTransport` to check the exact request shapes.
+
+## Measuring quality
+
+`newsletter-agent eval` runs the real pipeline (MCP server, scan, triage, classification, validation) on 96 invented emails with known labels: 56 from the demo mailbox (at most 6 per sender) and 40 hand-written hard cases, such as receipts from newsletter senders, a friend writing through a newsletter platform, product updates that read like promotions, non-English issues, prompt-injection attempts, and HTML-only or empty bodies. `evals/build_dataset.py` regenerates the dataset.
+
+It reports:
+- **Subscription detection**, scored end to end: mail the privacy triage never sends to the model counts as "not a subscription".
+- **Per-category precision, recall and F1**, and a confusion matrix, over the emails that reached the model.
+- **Triage coverage:** how many real subscriptions reached the model, and how many personal emails were kept from it or sent as headers only.
+- **Publication-name accuracy, unresolved answers, and tokens per 1,000 emails.**
+
+Invented, missing or duplicate IDs count as unresolved and lower recall. A budget stop marks the result incomplete. `--real-model` refuses any dataset except the bundled synthetic one, so the eval can never send other email to OpenAI. CI runs the offline stand-in and fails if its scores drop. Results are in `evals/results/`.

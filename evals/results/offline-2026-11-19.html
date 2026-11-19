@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src data:">
+<meta name="referrer" content="no-referrer">
+<title>Classification quality</title>
+<style>
+:root {
+  --bg: #f7f7f5; --surface: #ffffff; --text: #1d1d1b; --muted: #6b6b66; --border: #e3e2dd;
+  --accent: #2f5bd3; --accent-soft: #e8eefc; --good: #1f7a4d; --good-soft: #e3f3ea;
+  --warn: #9a5b00; --warn-soft: #fbefdc; --bar: #2f5bd3;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #141413; --surface: #1d1d1b; --text: #ecebe6; --muted: #a3a29b; --border: #33322f;
+    --accent: #8aa8ff; --accent-soft: #1f2a48; --good: #6fd3a0; --good-soft: #17342a;
+    --warn: #f0b45c; --warn-soft: #3a2a12; --bar: #8aa8ff;
+  }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text);
+  font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+main { max-width: 1100px; margin: 0 auto; padding: 24px 16px 64px; }
+h1 { font-size: 26px; margin: 0 0 4px; } h2 { font-size: 18px; margin: 32px 0 12px; }
+.muted { color: var(--muted); } .small { font-size: 13px; }
+.demo { display: inline-block; background: var(--warn-soft); color: var(--warn); border-radius: 6px;
+  padding: 2px 8px; font-size: 12px; font-weight: 600; letter-spacing: .04em; margin-bottom: 8px; }
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-top: 20px; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 14px; }
+.card .value { font-size: 26px; font-weight: 650; } .card .label { color: var(--muted); font-size: 13px; }
+.badge { display: inline-block; border-radius: 999px; padding: 1px 9px; font-size: 12px; font-weight: 600; }
+.badge.good { background: var(--good-soft); color: var(--good); }
+.badge.warn { background: var(--warn-soft); color: var(--warn); }
+.badge.info { background: var(--accent-soft); color: var(--accent); }
+.bars { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 14px; }
+.bar-row { display: grid; grid-template-columns: 140px 1fr 56px; gap: 10px; align-items: center; margin: 6px 0; }
+.bar-track { background: var(--bg); border-radius: 4px; height: 12px; overflow: hidden; }
+.bar-fill { background: var(--bar); height: 100%; border-radius: 4px; }
+.controls { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+.controls input, .controls select { font: inherit; padding: 6px 10px; border: 1px solid var(--border);
+  border-radius: 8px; background: var(--surface); color: var(--text); }
+.controls input { flex: 1 1 220px; }
+.table-wrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; }
+table { border-collapse: collapse; width: 100%; min-width: 640px; }
+th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+th { font-size: 13px; color: var(--muted); font-weight: 600; cursor: pointer; user-select: none; white-space: nowrap; }
+th.num, td.num { text-align: right; font-variant-numeric: tabular-nums; }
+tr:last-child td { border-bottom: none; }
+details summary { cursor: pointer; } details .detail { color: var(--muted); font-size: 13px; margin-top: 6px; }
+ul.notes li { margin: 4px 0; }
+.section { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px; margin: 12px 0; }
+.section h3 { margin: 0 0 8px; font-size: 16px; }
+.source { color: var(--muted); font-size: 13px; }
+</style>
+</head>
+<body>
+<main>
+
+
+<h1>Classification quality</h1>
+<p class="muted">offline stand-in (keyword rules) · 96 synthetic emails · status complete
+· ship bar: subscription F1 ≥ 90.0% (met)</p>
+<div class="cards">
+  <div class="card"><div class="value">93.0%</div><div class="label">subscription detection F1</div></div>
+  <div class="card"><div class="value">76.3%</div><div class="label">category accuracy</div></div>
+  <div class="card"><div class="value">69.0%</div><div class="label">macro F1 over categories</div></div>
+  <div class="card"><div class="value">100.0%</div><div class="label">subscriptions reaching the model</div></div>
+  <div class="card"><div class="value">0.0%</div><div class="label">unresolved answers</div></div>
+  <div class="card"><div class="value">0</div><div class="label">tokens per 1,000 emails</div></div>
+</div>
+<h2>Per category (emails that reached the model)</h2>
+<div class="table-wrap"><table><thead><tr><th>Category</th><th class="num">Emails</th><th class="num">Precision</th>
+<th class="num">Recall</th><th class="num">F1</th></tr></thead><tbody><tr><td>Newsletter</td><td class="num">38</td><td class="num">67.3%</td><td class="num">97.4%</td><td class="num">79.6%</td></tr><tr><td>Promotion</td><td class="num">20</td><td class="num">93.3%</td><td class="num">70.0%</td><td class="num">80.0%</td></tr><tr><td>Product update</td><td class="num">11</td><td class="num">100.0%</td><td class="num">27.3%</td><td class="num">42.9%</td></tr><tr><td>Transactional</td><td class="num">20</td><td class="num">100.0%</td><td class="num">70.0%</td><td class="num">82.3%</td></tr><tr><td>Personal / other</td><td class="num">4</td><td class="num">50.0%</td><td class="num">75.0%</td><td class="num">60.0%</td></tr></tbody></table></div>
+<h2>Confusion matrix (rows: true label, columns: outcome)</h2>
+<div class="table-wrap"><table><thead><tr><th>True label</th><th class="num">Newsletter</th><th class="num">Promotion</th><th class="num">Product update</th><th class="num">Transactional</th><th class="num">Personal / other</th><th class="num">Uncertain</th><th class="num">Unresolved</th><th class="num">Pending</th><th class="num">Not sent</th></tr></thead><tbody><tr><td>Newsletter</td><td class="num">37</td><td class="num">1</td><td class="num"></td><td class="num"></td><td class="num"></td><td class="num"></td><td class="num"></td><td class="num"></td><td class="num"></td></tr><tr><td>Promotion</td><td class="num">6</td><td class="num">14</td><td class="num"></td><td class="num"></td><td class="num"></td><td class="num"></td><td class="num"></td><td class="num"></td><td class="num"></td></tr><tr><td>Product update</td><td class="num">5</td><td class="num"></td><td class="num">3</td><td class="num"></td><td class="num">3</td><td class="num"></td><td class="num"></td><td class="num"></td><td class="num"></td></tr><tr><td>Transactional</td><td class="num">6</td><td class="num"></td><td class="num"></td><td class="num">14</td><td class="num"></td><td class="num"></td><td class="num"></td><td class="num"></td><td class="num"></td></tr><tr><td>Personal / other</td><td class="num">1</td><td class="num"></td><td class="num"></td><td class="num"></td><td class="num">3</td><td class="num"></td><td class="num"></td><td class="num"></td><td class="num">3</td></tr></tbody></table></div>
+<h2>Mistakes</h2>
+<ul class="notes"><li>Reset your password: expected Transactional, got Newsletter · Security code with list headers</li><li>Your order has shipped: expected Transactional, got Newsletter · Shipping notice with a marketing footer</li><li>New sign-in from Firefox on Linux: expected Transactional, got Newsletter</li><li>Your tickets for Harbor Lights Festival: expected Transactional, got Newsletter</li><li>Re: your comment on my post: expected Personal / other, got Newsletter · A friend replying through a newsletter platform</li><li>Your weekly site report: week 22: expected Product update, got Personal / other · Automated weekly report with no list headers; headers only</li><li>Your weekly site report: week 21: expected Product update, got Personal / other · Automated weekly report with no list headers; headers only</li><li>Your weekly site report: week 20: expected Product update, got Personal / other · Automated weekly report with no list headers; headers only</li><li>We&#x27;re updating our terms of service: expected Product update, got Newsletter</li><li>Introducing offline mode: expected Product update, got Newsletter</li><li>Upgrade to Notewell Pro and save 30%: expected Promotion, got Newsletter</li><li>Pixel Forge 5.0 is here: expected Product update, got Newsletter</li><li>Free webinar: double your email signups: expected Promotion, got Newsletter</li><li>Can you help us plant 1,000 trees?: expected Promotion, got Newsletter</li><li>Why the summer sale season is changing: expected Newsletter, got Promotion · Editorial issue with the word &#x27;sale&#x27; in the subject</li><li>Our story: how we source our beans: expected Promotion, got Newsletter · Promotion written like an article</li><li>You have 450 points to spend: expected Promotion, got Newsletter</li><li>Your subscription renews on 5 June: expected Transactional, got Newsletter</li><li>Your Notewell sign-in code: expected Transactional, got Newsletter</li><li>24 hours only: headphones from $19: expected Promotion, got Newsletter</li><li>Taskline changelog: May: expected Product update, got Newsletter</li><li>Scheduled maintenance on 8 June: expected Product update, got Newsletter</li></ul>
+<p class="muted small">"Not sent" means the privacy triage kept the email from the model. For personal email that is
+the right outcome and is not counted as a mistake.</p>
+
+</main>
+<script>
+(function () {
+  const table = document.getElementById('publications');
+  if (!table) return;
+  const body = table.tBodies[0];
+  const rows = Array.from(body.rows);
+  const search = document.getElementById('search');
+  const category = document.getElementById('category');
+  const status = document.getElementById('status');
+  function applyFilters() {
+    const text = search.value.toLowerCase();
+    rows.forEach(function (row) {
+      const visible = row.dataset.search.includes(text)
+        && (category.value === 'all' || row.dataset.category === category.value
+            || (category.value === 'subscription' && row.dataset.subscription === 'yes'))
+        && (status.value === 'all' || row.dataset.status === status.value
+            || (status.value === 'mostly_unread' && Number(row.dataset.unread) * 2 > Number(row.dataset.received)));
+      row.hidden = !visible;
+    });
+  }
+  [search, category, status].forEach(function (el) { el.addEventListener('input', applyFilters); });
+  table.querySelectorAll('th[data-sort]').forEach(function (header) {
+    let ascending = header.dataset.sort === 'name';
+    header.addEventListener('click', function () {
+      const key = header.dataset.sort;
+      rows.sort(function (a, b) {
+        const x = a.dataset[key], y = b.dataset[key];
+        const result = isNaN(x) ? x.localeCompare(y) : Number(x) - Number(y);
+        return ascending ? result : -result;
+      });
+      ascending = !ascending;
+      rows.forEach(function (row) { body.appendChild(row); });
+    });
+  });
+})();
+</script>
+</body>
+</html>

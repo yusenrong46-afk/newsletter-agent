@@ -114,6 +114,12 @@ def command_demo(args) -> int:
     return run_demo(args.output, args.real_model, args.open)
 
 
+def command_eval(args) -> int:
+    from .evaluate import run_eval_command
+
+    return run_eval_command(real_model=args.real_model, dataset=args.dataset, output=args.output, approved=args.yes)
+
+
 def command_mcp_server(args) -> int:
     from .gmail_server import run_gmail_server
 
@@ -171,6 +177,16 @@ def build_parser() -> argparse.ArgumentParser:
     demo.add_argument("--real-model", action="store_true", help="Send the synthetic emails to GPT-6 Luna (your key)")
     demo.add_argument("--open", action="store_true", help="Open the demo report in your browser")
     demo.set_defaults(handler=command_demo)
+
+    evaluate = commands.add_parser("eval", help="Measure classification quality on labelled synthetic emails")
+    evaluate.add_argument("--real-model", action="store_true",
+                          help="Use the real model (your OpenAI key); only the bundled synthetic emails are sent")
+    evaluate.add_argument("--dataset", metavar="FILE",
+                          help="A JSONL dataset to score offline instead of the bundled one")
+    evaluate.add_argument("--output", metavar="DIR",
+                          help="Where to save the results (default ~/.newsletter-agent/evals)")
+    evaluate.add_argument("--yes", action="store_true", help="With --real-model: approve without a prompt")
+    evaluate.set_defaults(handler=command_eval)
 
     commands.add_parser("mcp-server", help="Run the Gmail MCP server (used internally)").set_defaults(
         handler=command_mcp_server)
