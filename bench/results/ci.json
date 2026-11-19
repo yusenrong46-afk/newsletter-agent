@@ -1,0 +1,5 @@
+{
+ "status": "passed",
+ "run": "https://github.com/yusenrong46-afk/newsletter-agent/actions/runs/44620066115",
+ "jobs": ["ubuntu-latest / Python 3.11", "ubuntu-latest / Python 3.13 (lint, types, Pages)", "macos-latest / Python 3.13", "windows-latest / Python 3.13"]
+}
