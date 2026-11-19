@@ -1,0 +1,101 @@
+{
+ "briefing_counts": {
+  "dropped_bullets": 0,
+  "issues": 6,
+  "publications": 4,
+  "summarized": 6
+ },
+ "category_breakdown": {
+  "editorial_newsletter": 118,
+  "personal_or_other": 0,
+  "product_update": 3,
+  "promotional_subscription": 27,
+  "transactional": 14,
+  "uncertain": 0
+ },
+ "counts": {
+  "candidates": 162,
+  "classified": 162,
+  "classified_from_cache": 0,
+  "classified_this_run": 162,
+  "discovered": 171,
+  "duplicate_listings_ignored": 0,
+  "excluded": 6,
+  "excluded_by_reason": {
+   "label_sent": 2,
+   "outside_window": 4
+  },
+  "in_scope": 164,
+  "in_scope_unread": 117,
+  "metadata_fetched_this_run": 170,
+  "metadata_from_cache_this_run": 0,
+  "not_candidates": 2,
+  "not_yet_classified": 0,
+  "publications_observed": 7,
+  "publications_provisional": 0,
+  "subscription_messages": 148,
+  "subscription_unread": 112,
+  "unavailable": 1,
+  "unresolved": 0
+ },
+ "groups": [
+  {
+   "category": "editorial_newsletter",
+   "group_key": "list:bytegarden.mailhost.example",
+   "name": "Byte Garden",
+   "received": 26,
+   "status": "observed",
+   "unread": 20
+  },
+  {
+   "category": "editorial_newsletter",
+   "group_key": "list:fieldnotes.mailhost.example",
+   "name": "Field Notes Daily",
+   "received": 65,
+   "status": "observed",
+   "unread": 51
+  },
+  {
+   "category": "editorial_newsletter",
+   "group_key": "list:ledger.quietledger.example",
+   "name": "The Quiet Ledger",
+   "received": 14,
+   "status": "observed",
+   "unread": 9
+  },
+  {
+   "category": "editorial_newsletter",
+   "group_key": "list:news.orbitweekly.example",
+   "name": "Orbit Weekly",
+   "received": 13,
+   "status": "observed",
+   "unread": 6
+  },
+  {
+   "category": "product_update",
+   "group_key": "list:updates.pixelforge.example",
+   "name": "Pixel Forge",
+   "received": 3,
+   "status": "observed",
+   "unread": 2
+  },
+  {
+   "category": "promotional_subscription",
+   "group_key": "sender:deals@mapleleaf.example",
+   "name": "Mapleleaf Coffee",
+   "received": 15,
+   "status": "observed",
+   "unread": 14
+  },
+  {
+   "category": "promotional_subscription",
+   "group_key": "sender:news@trailhead.example",
+   "name": "Trailhead Outfitters",
+   "received": 12,
+   "status": "observed",
+   "unread": 10
+  }
+ ],
+ "reconciliation_ok": true,
+ "status": "complete"
+}

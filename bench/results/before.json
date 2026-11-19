@@ -1,0 +1,158 @@
+{
+ "label": "before",
+ "commit": "9150bfb",
+ "generated_at": "2026-11-19T20:48:24+00:00",
+ "python": "3.13.18",
+ "platform": "Linux-6.18.44-fc-v653-x86_64-with-glibc2.39",
+ "scan_speed": {
+  "messages": 1000,
+  "latency_ms": 30,
+  "seconds": 31.79,
+  "messages_per_second": 31.5,
+  "peak_parallel_reads": 1,
+  "metadata_reads": 1000,
+  "speedup_vs_sequential": 0.94,
+  "projection": {
+   "messages": 5000,
+   "seconds_per_read": 0.33,
+   "sequential_minutes": 27.5,
+   "minutes": 27.5,
+   "assumption": "Real Gmail at about 3 reads per second one at a time, scaled by the speedup measured here."
+  }
+ },
+ "full_run": {
+  "messages": 300,
+  "latency_ms": 30,
+  "seconds": 19.09,
+  "gmail_reads": 600,
+  "peak_parallel_reads": 1,
+  "status": "complete"
+ },
+ "disk": {
+  "messages": 5000,
+  "pages": 10,
+  "seconds": 3.04,
+  "bytes_written": 17042371,
+  "whole_file_rewrites": 25,
+  "whole_file_rewrite_bytes": 17041822,
+  "bytes_on_disk": 2272612
+ },
+ "rerun": {
+  "messages": 5000,
+  "seconds": 0.6,
+  "metadata_reads": 0,
+  "discovered": 5000
+ },
+ "answers": {
+  "counts": {
+   "discovered": 171,
+   "in_scope": 164,
+   "excluded": 6,
+   "excluded_by_reason": {
+    "label_sent": 2,
+    "outside_window": 4
+   },
+   "unavailable": 1,
+   "duplicate_listings_ignored": 0,
+   "metadata_fetched_this_run": 170,
+   "metadata_from_cache_this_run": 0,
+   "candidates": 162,
+   "not_candidates": 2,
+   "classified": 162,
+   "classified_this_run": 162,
+   "classified_from_cache": 0,
+   "unresolved": 0,
+   "not_yet_classified": 0,
+   "subscription_messages": 148,
+   "subscription_unread": 112,
+   "in_scope_unread": 117,
+   "publications_observed": 7,
+   "publications_provisional": 0
+  },
+  "category_breakdown": {
+   "editorial_newsletter": 118,
+   "promotional_subscription": 27,
+   "product_update": 3,
+   "transactional": 14,
+   "personal_or_other": 0,
+   "uncertain": 0
+  },
+  "groups": [
+   {
+    "group_key": "list:bytegarden.mailhost.example",
+    "name": "Byte Garden",
+    "category": "editorial_newsletter",
+    "status": "observed",
+    "received": 26,
+    "unread": 20
+   },
+   {
+    "group_key": "list:fieldnotes.mailhost.example",
+    "name": "Field Notes Daily",
+    "category": "editorial_newsletter",
+    "status": "observed",
+    "received": 65,
+    "unread": 51
+   },
+   {
+    "group_key": "list:ledger.quietledger.example",
+    "name": "The Quiet Ledger",
+    "category": "editorial_newsletter",
+    "status": "observed",
+    "received": 14,
+    "unread": 9
+   },
+   {
+    "group_key": "list:news.orbitweekly.example",
+    "name": "Orbit Weekly",
+    "category": "editorial_newsletter",
+    "status": "observed",
+    "received": 13,
+    "unread": 6
+   },
+   {
+    "group_key": "list:updates.pixelforge.example",
+    "name": "Pixel Forge",
+    "category": "product_update",
+    "status": "observed",
+    "received": 3,
+    "unread": 2
+   },
+   {
+    "group_key": "sender:deals@mapleleaf.example",
+    "name": "Mapleleaf Coffee",
+    "category": "promotional_subscription",
+    "status": "observed",
+    "received": 15,
+    "unread": 14
+   },
+   {
+    "group_key": "sender:news@trailhead.example",
+    "name": "Trailhead Outfitters",
+    "category": "promotional_subscription",
+    "status": "observed",
+    "received": 12,
+    "unread": 10
+   }
+  ],
+  "reconciliation_ok": true,
+  "status": "complete",
+  "briefing_counts": {
+   "issues": 6,
+   "summarized": 6,
+   "publications": 4,
+   "dropped_bullets": 0
+  }
+ },
+ "code_health": {
+  "ruff_findings": 110,
+  "mypy_errors": 20,
+  "tests_passed": 94,
+  "tests_failed": 0,
+  "tests_seconds": 6.2,
+  "settings": {
+   "ruff": "ruff 0.17.6 --line-length 120 --select E,F,W,B,UP,SIM,I --target-version py311",
+   "mypy": "mypy 2.4.1 --python-version 3.11 --check-untyped-defs --ignore-missing-imports"
+  }
+ }
+}
