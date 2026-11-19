@@ -33,10 +33,10 @@ def offline_eval(cases=None):
 
 def test_the_eval_command_scores_the_bundled_dataset_and_saves_results(tmp_path, capsys):
     assert cli.main(["eval", "--output", str(tmp_path)]) == 0
-    saved = json.loads(next(tmp_path.glob("offline-*.json")).read_text())
+    saved = json.loads(next(tmp_path.glob("offline-*.json")).read_text(encoding="utf-8"))
     assert saved["cases"] == len(load_dataset())
     assert saved["complete"] is True
-    assert next(tmp_path.glob("offline-*.html")).read_text().startswith("<!doctype html>")
+    assert next(tmp_path.glob("offline-*.html")).read_text(encoding="utf-8").startswith("<!doctype html>")
     assert "Subscription detection: F1" in capsys.readouterr().out
 
 

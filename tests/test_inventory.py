@@ -2,6 +2,7 @@
 
 import asyncio
 import contextlib
+import os
 import stat
 import sys
 from datetime import timedelta
@@ -407,8 +408,10 @@ def test_private_files_have_no_bodies_or_unsubscribe_urls_and_restricted_modes(t
     for path in files:
         data = path.read_bytes()  # Raw bytes, so the binary database is checked too.
         assert b"BODY-SECRET-TEXT" not in data and b"SECRET-TOKEN" not in data
-        assert stat.S_IMODE(path.stat().st_mode) == 0o600
-    assert stat.S_IMODE(directory.stat().st_mode) == 0o700
+        if os.name == "posix":  # Windows has no POSIX permission bits; the user profile's ACLs apply.
+            assert stat.S_IMODE(path.stat().st_mode) == 0o600
+    if os.name == "posix":
+        assert stat.S_IMODE(directory.stat().st_mode) == 0o700
     assert "SECRET-TOKEN" not in fake.calls[0]["input"]
 
 

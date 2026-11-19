@@ -1,5 +1,6 @@
 """The command line, setup checks, and importing data from the old single-file layout."""
 
+import os
 import stat
 
 import pytest
@@ -49,6 +50,7 @@ def test_import_legacy_copies_privately_and_never_overwrites(tmp_path):
         "inventory/classification_cache.json",
         "inventory/reports/inventory-1.json",
     ]
-    assert (config.credentials_dir() / "token.json").read_text() == "newer-token"
-    for name in copied:
-        assert stat.S_IMODE((config.app_home() / name).stat().st_mode) == 0o600
+    assert (config.credentials_dir() / "token.json").read_text(encoding="utf-8") == "newer-token"
+    if os.name == "posix":  # Windows has no POSIX permission bits; the user profile's ACLs apply.
+        for name in copied:
+            assert stat.S_IMODE((config.app_home() / name).stat().st_mode) == 0o600

@@ -176,6 +176,7 @@ def test_database_files_are_owner_only(tmp_path):
         assert stat.S_IMODE(path.stat().st_mode) == 0o600, suffix
 
 
+@pytest.mark.skipif(not POSIX, reason="Creating symlinks on Windows needs administrator rights")
 def test_a_symlinked_database_is_refused(tmp_path):
     directory = tmp_path / "inventory"
     directory.mkdir()

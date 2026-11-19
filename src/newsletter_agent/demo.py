@@ -305,12 +305,18 @@ async def run_demo_async(output_dir: Path, model_factory, approved: bool, now: d
     settings: dict = dict(config.DEFAULT_CONFIG["briefing"])
     with tempfile.TemporaryDirectory() as scratch:
         store = InventoryStore(Path(scratch) / "inventory")
-        async with demo_gmail_client(mailbox) as gmail:
-            report = await run_inventory(gmail, InventoryOptions(days=90, approved=approved, quiet=True), store,
-                                         openai_factory=model_factory, now=now, demo=True)
-            briefing_store = InventoryStore(Path(scratch) / "inventory", checkpoint_name="briefing_checkpoint.json")
-            briefing = await run_briefing(gmail, briefing_store, settings, output_dir, openai_factory=model_factory,
-                                          approved=approved, now=now, demo=True, remember=False)
+        briefing_store = InventoryStore(Path(scratch) / "inventory", checkpoint_name="briefing_checkpoint.json")
+        try:
+            async with demo_gmail_client(mailbox) as gmail:
+                report = await run_inventory(gmail, InventoryOptions(days=90, approved=approved, quiet=True), store,
+                                             openai_factory=model_factory, now=now, demo=True)
+                briefing = await run_briefing(gmail, briefing_store, settings, output_dir,
+                                              openai_factory=model_factory, approved=approved, now=now, demo=True,
+                                              remember=False)
+        finally:
+            # Close the database before the temporary folder is deleted (Windows cannot delete open files).
+            store.close()
+            briefing_store.close()
     config.write_private_file(output_dir / "index.html", render_html_report(report, demo=True))
     # A stable name for the published demo site; the dated copy stays too.
     config.write_private_file(output_dir / "briefing.html", (output_dir / "latest.html").read_text(encoding="utf-8"))

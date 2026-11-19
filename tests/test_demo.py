@@ -50,7 +50,7 @@ def test_demo_writes_a_labelled_site(tmp_path):
     (tmp_path / "site").mkdir()
     run(tmp_path)
     for name in ("index.html", "briefing.html"):
-        html = (tmp_path / "site" / name).read_text()
+        html = (tmp_path / "site" / name).read_text(encoding="utf-8")
         assert "DEMO DATA" in html and "Content-Security-Policy" in html
 
 

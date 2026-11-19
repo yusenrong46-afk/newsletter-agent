@@ -15,7 +15,6 @@ Version 0.1 kept the caches in JSON files. They are imported once, then
 renamed to *.migrated and kept as a backup.
 """
 
-import fcntl
 import json
 import os
 import sqlite3
@@ -206,11 +205,10 @@ class InventoryStore:
         """Stop two runs (say, a scheduled briefing and a manual inventory) sharing the caches."""
         # Kept open on purpose: the lock lasts until unlock() closes the file.
         lock_file = open(self.directory / ".lock", "w")  # noqa: SIM115
+        if not try_lock(lock_file):
+            lock_file.close()
+            raise ValueError("Another newsletter-agent run is using this data. Try again when it finishes.")
         self._lock_file = lock_file
-        try:
-            fcntl.flock(lock_file, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        except BlockingIOError:
-            raise ValueError("Another newsletter-agent run is using this data. Try again when it finishes.") from None
 
     def unlock(self):
         if self._lock_file:
@@ -275,6 +273,25 @@ class InventoryStore:
             config.write_private_file(path, content)
             paths.append(path)
         return paths
+
+
+def try_lock(lock_file: TextIO) -> bool:
+    """Take an exclusive, non-blocking lock on an open file. Released when the file closes."""
+    if os.name == "nt":
+        import msvcrt
+
+        try:
+            msvcrt.locking(lock_file.fileno(), msvcrt.LK_NBLCK, 1)  # type: ignore[attr-defined,unused-ignore]
+        except OSError:
+            return False
+        return True
+    import fcntl
+
+    try:
+        fcntl.flock(lock_file, fcntl.LOCK_EX | fcntl.LOCK_NB)  # type: ignore[attr-defined,unused-ignore]
+    except BlockingIOError:
+        return False
+    return True
 
 
 def latest_report_path(suffix: str = "json") -> Path | None:

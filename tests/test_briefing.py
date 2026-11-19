@@ -63,7 +63,7 @@ def summary_calls(fake):
 
 def state(tmp_path):
     path = tmp_path / "briefings" / "briefing_state.json"
-    return json.loads(path.read_text()) if path.exists() else None
+    return json.loads(path.read_text(encoding="utf-8")) if path.exists() else None
 
 
 def test_first_briefing_covers_24_hours_and_only_newsletters(tmp_path):
@@ -73,7 +73,7 @@ def test_first_briefing_covers_24_hours_and_only_newsletters(tmp_path):
     assert result["counts"] == {"issues": 2, "summarized": 2, "publications": 2, "dropped_bullets": 0}
     assert "First briefing" in result["notes"][0]
     assert state(tmp_path) == {"last_success_end_ms": NOW_MS}
-    html = (tmp_path / "briefings" / "latest.html").read_text()
+    html = (tmp_path / "briefings" / "latest.html").read_text(encoding="utf-8")
     assert "Summary of Ledger: rates" in html and "message n1" in html
 
 
@@ -147,7 +147,7 @@ def test_no_new_newsletters_still_makes_a_page_and_moves_on(tmp_path):
         tmp_path, fake_gmail([newsletter("p1", list_id="shop.example", subject="Big sale", when=NOW_MS - HOUR_MS)])
     )
     assert result["sections"] == [] and summary_calls(fake) == []
-    assert "No new newsletter issues" in (tmp_path / "briefings" / "latest.html").read_text()
+    assert "No new newsletter issues" in (tmp_path / "briefings" / "latest.html").read_text(encoding="utf-8")
     assert state(tmp_path) == {"last_success_end_ms": NOW_MS}
 
 

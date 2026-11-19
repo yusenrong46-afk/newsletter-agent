@@ -16,7 +16,7 @@
 | `inventory.py` | The inventory workflow and its command |
 | `briefing.py` | Incremental briefing: select, summarize, validate sources, render, notify |
 | `chat.py` | Chat with three local read-only tools |
-| `schedule.py` | launchd install/remove after consent |
+| `schedule.py` | Daily schedule after consent: launchd (macOS), systemd user timer (Linux), Task Scheduler (Windows) |
 | `demo.py` | Synthetic mailbox, offline model stand-in, demo site |
 | `evaluate.py` | The quality eval: labelled synthetic dataset (`eval_data/dataset.jsonl`), scoring, results page |
 
@@ -63,7 +63,7 @@
 2. **Scan and classify:** the same scan and classification code, so only new mail is classified. The briefing uses its own checkpoint but shares the caches.
 3. **Select:** new `editorial_newsletter` issues, with optional include/exclude filters by publication name.
 4. **Summarize:** up to 6,000 characters per issue, 8 issues per call. Each bullet must cite a `source_message_id` from its own batch; otherwise it is dropped and counted. Links are removed from both the input and the output.
-5. **Save:** a dated HTML page, `latest.html`, and a counts-only macOS notification. The window moves forward only after a complete briefing, so a failure or budget stop never skips mail.
+5. **Save:** a dated HTML page, `latest.html`, and a counts-only desktop notification (macOS `osascript`, Linux `notify-send`; none on Windows). The window moves forward only after a complete briefing, so a failure or budget stop never skips mail.
 
 ## Testing
 

@@ -15,7 +15,7 @@ def command_setup(args) -> int:
         copied = config.import_legacy_data(Path(args.import_legacy).expanduser())
         print(f"Imported {len(copied)} files into {config.app_home()} (existing files were not overwritten).")
     credentials = config.credentials_dir()
-    from .schedule import plist_path
+    from .schedule import is_scheduled
     from .store import latest_report_path
 
     checks = [
@@ -29,7 +29,7 @@ def command_setup(args) -> int:
             f"set OPENAI_API_KEY or put OPENAI_API_KEY=... in {config.env_file()}",
         ),
         ("Inventory report", latest_report_path() is not None, "run: newsletter-agent inventory --preflight"),
-        ("Daily briefing schedule", plist_path().exists(), "optional: newsletter-agent schedule 07:00"),
+        ("Daily briefing schedule", is_scheduled(), "optional: newsletter-agent schedule 07:00"),
     ]
     for name, ok, hint in checks:
         print(f"  {'✓' if ok else '·'} {name}" + ("" if ok and name != "Data folder" else f": {hint}"))
@@ -167,7 +167,7 @@ def build_parser() -> argparse.ArgumentParser:
     brief.add_argument("--scheduled", action="store_true", help=argparse.SUPPRESS)
     brief.set_defaults(handler=command_brief)
 
-    schedule = commands.add_parser("schedule", help="Run the briefing daily (macOS), e.g. schedule 07:00")
+    schedule = commands.add_parser("schedule", help="Run the briefing daily, e.g. schedule 07:00")
     schedule.add_argument("time", help="24-hour time, HH:MM")
     schedule.set_defaults(handler=command_schedule)
     commands.add_parser("unschedule", help="Remove the daily briefing").set_defaults(handler=command_unschedule)
@@ -194,6 +194,10 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: list[str] | None = None) -> int:
+    for stream in (sys.stdout, sys.stderr):
+        # A Windows console may not encode every character in email subjects; never crash on one.
+        if hasattr(stream, "reconfigure") and (stream.encoding or "").lower().replace("-", "") != "utf8":
+            stream.reconfigure(errors="replace")
     args = build_parser().parse_args(argv)
     try:
         return args.handler(args)

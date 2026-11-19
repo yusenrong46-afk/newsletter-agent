@@ -52,7 +52,7 @@ You bring your own Google OAuth client and OpenAI key, so your email never passe
 5. `newsletter-agent inventory --preflight` is free: it scans and estimates cost without calling OpenAI.
 6. `newsletter-agent inventory` shows the same preflight, asks y/N, then classifies.
 7. `newsletter-agent report --open` opens the interactive HTML report.
-8. `newsletter-agent brief --open` makes today's briefing; `newsletter-agent schedule 07:00` runs it daily (macOS).
+8. `newsletter-agent brief --open` makes today's briefing; `newsletter-agent schedule 07:00` runs it daily (macOS, Linux and Windows).
 
 | Command | What it does |
 |---|---|
@@ -62,7 +62,7 @@ You bring your own Google OAuth client and OpenAI key, so your email never passe
 | `inventory [--days N] [--preflight] [--max-messages N] [--resume] [--yes]` | Runs the inventory; budgets via `--max-model-calls` and `--max-tokens` |
 | `report [--open]` | Latest HTML report |
 | `brief [--yes] [--open]` | Summarizes new newsletter issues |
-| `schedule HH:MM` / `unschedule` | Daily briefing with launchd, after explicit consent |
+| `schedule HH:MM` / `unschedule` | Daily briefing (launchd, systemd timer or Task Scheduler), after explicit consent |
 | `chat` | Asks about your newsletters |
 | `demo [--open] [--real-model]` | Synthetic mailbox, real pipeline |
 | `eval [--real-model]` | Scores classification on 96 labelled synthetic emails |
@@ -122,7 +122,7 @@ Details: [docs/privacy.md](docs/privacy.md).
 - A newsletter with no mailing-list headers and fewer than 3 messages in the window isn't classified. The report lists those senders.
 - One publication using two sender addresses appears as two groups.
 - The first full scan reads up to 8 messages at a time: about 4 to 5 minutes for 5,000 messages, where version 0.1 took about 28. Reruns use the cache.
-- Scheduling is macOS only; on Linux the `schedule` command prints a cron line instead. There's no hosted or multi-user version, by design.
+- Runs on macOS, Linux and Windows (CI tests all three). On Linux without systemd, `schedule` prints a cron line instead, and Windows Task Scheduler skips a run while the computer is off. On Windows, the private folder relies on your user profile's permissions, because POSIX file modes don't exist there. There's no hosted or multi-user version, by design.
 
 ## Development
 

@@ -162,7 +162,7 @@ def get_api_key() -> str:
         return key
     path = env_file()
     if path.exists():
-        for line in path.read_text().splitlines():
+        for line in path.read_text(encoding="utf-8").splitlines():
             name, separator, value = line.partition("=")
             if separator and name.strip() == "OPENAI_API_KEY":
                 return value.strip().strip("\"'")

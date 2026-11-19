@@ -10,10 +10,15 @@ permissions:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
-        python: ["3.11", "3.13"]
+        include:
+          - { os: ubuntu-latest, python: "3.11" }
+          - { os: ubuntu-latest, python: "3.13", checks: true, publish: true }
+          - { os: macos-latest, python: "3.13" }
+          - { os: windows-latest, python: "3.13" }
     steps:
       - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v10.3.3  # This action publishes exact version tags only.
@@ -22,15 +27,19 @@ jobs:
       - name: Install
         run: uv sync --locked
       - name: Lint (ruff)
+        if: matrix.checks
         run: uv run ruff check .
       - name: Type check (mypy)
+        if: matrix.checks
         run: uv run mypy
       - name: Tests (offline, synthetic email only)
         run: uv run pytest -q
       - name: Demo smoke test
         run: uv run newsletter-agent demo --output site
+      - name: Quality eval (offline stand-in)
+        run: uv run newsletter-agent eval --output site/eval
       - name: Upload demo site
-        if: matrix.python == '3.13'
+        if: matrix.publish
         uses: actions/upload-pages-artifact@v5
         with:
           path: site

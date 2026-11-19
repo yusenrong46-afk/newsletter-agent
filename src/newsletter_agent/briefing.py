@@ -411,7 +411,16 @@ async def run_briefing(gmail, store: InventoryStore, settings: dict, directory: 
 
 
 def notify(message: str, title: str = "Newsletter briefing"):
-    """Show a macOS notification. Text is passed as arguments, never pasted into a script."""
+    """Show a desktop notification: osascript on macOS, notify-send on Linux, nothing on Windows.
+
+    Text is always passed as separate arguments, never pasted into a script or a shell.
+    """
+    if sys.platform.startswith("linux"):
+        import shutil
+
+        if shutil.which("notify-send"):
+            subprocess.run(["notify-send", title, message], capture_output=True, timeout=15, check=False)
+        return
     if sys.platform != "darwin":
         return
     script = [
