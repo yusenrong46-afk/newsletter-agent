@@ -24,7 +24,14 @@ from pydantic import BaseModel, ConfigDict, ValidationError
 
 from . import config
 from .classify import MODEL, ModelClient, estimate_tokens, find_refusal, make_openai_client
-from .gmail_client import GmailToolError, clean_text, describe_session_failure, open_gmail_client, remove_links
+from .gmail_client import (
+    GmailToolError,
+    clean_text,
+    describe_session_failure,
+    gather_in_order,
+    open_gmail_client,
+    remove_links,
+)
 from .html_report import page
 from .inventory import run_inventory
 from .scan import InventoryOptions, progress, utc_iso
@@ -134,23 +141,25 @@ def validate_summary(expected_ids: list[str], batch: BriefingBatch) -> tuple[dic
 
 
 async def read_issue_texts(gmail, batch: list[dict], result: SummaryResult) -> list[dict]:
-    items = []
-    for issue in batch:
+    """Read issue texts in parallel; results keep the batch order."""
+
+    async def read_one(issue: dict) -> dict | None:
         try:
             raw = await gmail.read_body(issue["message_id"], SUMMARY_CHARS)
         except GmailToolError as error:
             if error.code != "not_found":
                 raise
             result.not_summarized[issue["message_id"]] = "deleted from Gmail"
-            continue
+            return None
         if raw["body_status"] == "unavailable":
             result.not_summarized[issue["message_id"]] = "no readable text"
-            continue
-        items.append({
+            return None
+        return {
             "id": issue["message_id"], "publication": issue["publication"], "subject": issue["subject"],
             "text_status": raw["body_status"], "text": remove_links(raw.get("body", "")),
-        })
-    return items
+        }
+
+    return [item for item in await gather_in_order(batch, read_one) if item is not None]
 
 
 def add_usage(result: SummaryResult, budget: Budget, response, estimate: int):

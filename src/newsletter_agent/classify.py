@@ -17,7 +17,7 @@ from openai import AsyncOpenAI, OpenAIError
 from pydantic import BaseModel, ConfigDict, ValidationError
 
 from . import config
-from .gmail_client import EXCERPT_CHARS, GmailMcpClient, GmailToolError, clean_text, remove_links
+from .gmail_client import EXCERPT_CHARS, GmailMcpClient, GmailToolError, clean_text, gather_in_order, remove_links
 from .scan import progress
 
 if TYPE_CHECKING:
@@ -253,21 +253,22 @@ async def request_classification(
 async def read_batch_items(
     run: "InventoryRun", gmail: GmailMcpClient, batch: list[tuple[dict, str]]
 ) -> list[tuple[dict, str, dict]]:
-    """Fetch body excerpts where allowed. Bodies stay in memory and are never saved."""
-    items = []
-    for record, policy in batch:
+    """Fetch body excerpts where allowed, in parallel. Bodies stay in memory and are never saved."""
+
+    async def read_one(entry: tuple[dict, str]) -> tuple[dict, str, dict] | None:
+        record, policy = entry
         if policy == "withheld":
-            items.append((record, policy, build_classifier_item(record, "withheld", "")))
-            continue
+            return record, policy, build_classifier_item(record, "withheld", "")
         try:
             raw = await gmail.read_body(record["id"], EXCERPT_CHARS)
         except GmailToolError as error:
             if error.code != "not_found":
                 raise
             run.state.unavailable[record["id"]] = "not_found"
-            continue
-        items.append((record, policy, build_classifier_item(record, raw["body_status"], raw.get("body", ""))))
-    return items
+            return None
+        return record, policy, build_classifier_item(record, raw["body_status"], raw.get("body", ""))
+
+    return [item for item in await gather_in_order(batch, read_one) if item is not None]
 
 
 def store_classification(run: "InventoryRun", record: dict, policy: str, item: dict, result: MessageClassification):

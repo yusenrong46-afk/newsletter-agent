@@ -178,6 +178,8 @@ def build_notes(run: InventoryRun, counts: dict, body_statuses: Counter) -> list
             f"{run.calls_without_usage} model calls returned no usable usage data, "
             "so actual token totals are understated."
         )
+    if run.slow_mode:
+        notes.append("Gmail asked us to slow down, so the rest of this run read one message at a time.")
     if run.unread_ids is None:
         notes.append("Unread flags could not be refreshed; they reflect when each message's metadata was read.")
     return notes

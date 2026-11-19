@@ -2,21 +2,31 @@
 
 Also turns raw tool results into small message records, keeping only what the
 inventory needs.
+
+Reads run in parallel (READ_CONCURRENCY at a time, see gather_in_order), and
+results are always used in the original order, so reports do not depend on
+which read finished first. If Gmail rate-limits a read after its own retries,
+the client switches to slow mode for the rest of the run: one read at a time,
+with backoff, before giving up.
 """
 
+import asyncio
 import contextlib
 import json
 import os
 import re
 import sys
+from collections.abc import Awaitable, Callable, Sequence
 from datetime import timedelta
 from email.utils import parseaddr
+from typing import TypeVar
 
 from . import config
 
 GMAIL_TOOL_NAMES = {"search_emails", "read_email"}
 LIST_PAGE_SIZE = 500
 MCP_CALL_TIMEOUT_SECONDS = 180  # Long enough for Google's retries and backoff.
+READ_CONCURRENCY = 8  # Matches the server's worker threads.
 EXCERPT_CHARS = 2000  # Part of the classification cache key: changing it re-classifies everything.
 
 BULK_HEADERS = (
@@ -45,9 +55,41 @@ class GmailToolError(Exception):
         return cls("gmail_error", "The Gmail tool reported an unrecognized error.")
 
 
+T = TypeVar("T")
+R = TypeVar("R")
+
+
+async def gather_in_order(items: Sequence[T], worker: Callable[[T], Awaitable[R]],
+                          limit: int = READ_CONCURRENCY) -> list[R]:
+    """Run worker(item) for every item, at most `limit` at once; results come back in input order.
+
+    If one worker fails, the others are cancelled and that error is raised as is.
+    If the caller is cancelled (Ctrl-C), every worker is cancelled and awaited first.
+    """
+    semaphore = asyncio.Semaphore(limit)
+
+    async def guarded(item: T) -> R:
+        async with semaphore:
+            return await worker(item)
+
+    tasks = [asyncio.ensure_future(guarded(item)) for item in items]
+    try:
+        return list(await asyncio.gather(*tasks))
+    finally:
+        for task in tasks:
+            if not task.done():
+                task.cancel()
+        await asyncio.gather(*tasks, return_exceptions=True)
+
+
 class GmailMcpClient:
+    RATE_LIMIT_RETRIES = 3
+    RATE_LIMIT_BACKOFF_SECONDS = 2.0  # Doubles on each retry: 2, 4, 8 seconds.
+
     def __init__(self, session):
         self.session = session
+        self.slow_mode = False  # Set once Gmail rate-limits a read; then reads go one at a time.
+        self._one_at_a_time = asyncio.Lock()
 
     async def verify_tools(self):
         tools = await self.session.list_tools()
@@ -78,13 +120,27 @@ class GmailMcpClient:
             "search_emails", {"query": query, "page_token": page_token, "page_size": LIST_PAGE_SIZE},
         )
 
+    async def read(self, arguments: dict) -> dict:
+        """read_email, with slow mode and backoff when Gmail rate-limits us."""
+        attempt = 0
+        while True:
+            try:
+                if self.slow_mode:
+                    async with self._one_at_a_time:
+                        return await self.call_tool("read_email", arguments)
+                return await self.call_tool("read_email", arguments)
+            except GmailToolError as error:
+                if error.code != "rate_limited" or attempt >= self.RATE_LIMIT_RETRIES:
+                    raise
+                self.slow_mode = True
+                await asyncio.sleep(self.RATE_LIMIT_BACKOFF_SECONDS * 2 ** attempt)
+                attempt += 1
+
     async def read_metadata(self, message_id: str) -> dict:
-        return await self.call_tool("read_email", {"message_id": message_id, "mode": "metadata"})
+        return await self.read({"message_id": message_id, "mode": "metadata"})
 
     async def read_body(self, message_id: str, max_chars: int = EXCERPT_CHARS) -> dict:
-        return await self.call_tool(
-            "read_email", {"message_id": message_id, "mode": "full", "max_chars": max_chars},
-        )
+        return await self.read({"message_id": message_id, "mode": "full", "max_chars": max_chars})
 
 
 def gmail_server_parameters():

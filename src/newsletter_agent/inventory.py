@@ -94,6 +94,7 @@ async def run_inventory(gmail, options: InventoryOptions, store: InventoryStore,
         task = asyncio.current_task()
         if task is not None:
             task.uncancel()
+    run.slow_mode = bool(getattr(gmail, "slow_mode", False))
     return finish_run(run, demo=demo)
 
 

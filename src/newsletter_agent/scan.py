@@ -9,12 +9,13 @@ from collections import Counter
 from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime, timedelta
 
-from .gmail_client import GmailMcpClient, GmailToolError, make_message_record, sender_address
+from .gmail_client import GmailMcpClient, GmailToolError, gather_in_order, make_message_record, sender_address
 from .store import InventoryStore
 
 SECONDS_PER_DAY = 86400
 EXCLUDED_LABELS = ("SENT", "DRAFT", "SPAM", "TRASH", "CHAT")
 RECURRING_SENDER_MINIMUM = 3
+READ_CHUNK = 16  # IDs read in parallel at a time; results are applied in listing order.
 DEFAULT_MAX_MODEL_CALLS = 400
 DEFAULT_MAX_TOKENS = 4_500_000  # Covers a mailbox of about 5,000 candidates.
 
@@ -64,6 +65,7 @@ class InventoryRun:
     budget_exhausted: bool = False
     interrupted: bool = False
     failures: list[dict] = field(default_factory=list)
+    slow_mode: bool = False  # Gmail rate-limited a read, so the rest of the run read one at a time.
     duplicate_listings: int = 0
     pages_listed: int = 0
     metadata_fetched: int = 0
@@ -134,17 +136,25 @@ async def scan_mailbox(run: InventoryRun, gmail: GmailMcpClient):
 
     The listing always restarts from page one, because an old page token may
     no longer be valid. Deduplicating by ID prevents double counting.
+
+    Each page's new IDs are read READ_CHUNK at a time in parallel, then applied
+    in listing order, so the result is the same as reading one at a time.
     """
     state, store = run.state, run.store
     previously_discovered = set(state.discovered) if run.resumed else set()
-    seen, seen_set, in_scope_count = [], set(), 0
+    seen: list[str] = []
+    seen_set: set[str] = set()
+    in_scope_count = 0
     page_token, stop = None, False
     try:
         while not stop:
             page = await gmail.search(state.query, page_token)
             run.pages_listed += 1
-            for item in page.get("messages", []):
-                message_id = item["id"]
+            listed = [item["id"] for item in page.get("messages", [])]
+            to_read = list(dict.fromkeys(message_id for message_id in listed if message_id not in seen_set))
+            fetched: dict[str, dict | GmailToolError | None] = {}
+            next_read = 0
+            for message_id in listed:
                 if message_id in seen_set:
                     run.duplicate_listings += 1
                     continue
@@ -152,8 +162,18 @@ async def scan_mailbox(run: InventoryRun, gmail: GmailMcpClient):
                     run.message_cap_reached = True
                     stop = True
                     break
-                state.unavailable.pop(message_id, None)
-                record = await fetch_metadata(run, gmail, message_id)
+                if message_id not in fetched:
+                    chunk = to_read[next_read:next_read + READ_CHUNK]
+                    next_read += len(chunk)
+                    for chunk_id in chunk:
+                        state.unavailable.pop(chunk_id, None)
+                    records = await gather_in_order(
+                        chunk, lambda chunk_id: fetch_metadata_or_error(run, gmail, chunk_id))
+                    fetched.update(zip(chunk, records, strict=True))
+                record = fetched[message_id]
+                if isinstance(record, GmailToolError):
+                    # Raised in listing order: every ID before it still counts, as with one-at-a-time reads.
+                    raise record
                 # Count an ID only after its read finished, so an interrupted or
                 # failed read can never leave a discovered ID with no outcome.
                 seen.append(message_id)
@@ -189,6 +209,14 @@ def save_discovered(run: InventoryRun, seen: list[str], previously_discovered: s
         # A partial listing cannot prove anything vanished, so keep earlier IDs.
         state.discovered = list(seen) + sorted(previously_discovered.difference(seen))
     run.save_checkpoint()
+
+
+async def fetch_metadata_or_error(run: InventoryRun, gmail: GmailMcpClient, message_id: str):
+    """Like fetch_metadata, but a Gmail failure is returned instead of raised."""
+    try:
+        return await fetch_metadata(run, gmail, message_id)
+    except GmailToolError as error:
+        return error
 
 
 async def fetch_metadata(run: InventoryRun, gmail: GmailMcpClient, message_id: str) -> dict | None:

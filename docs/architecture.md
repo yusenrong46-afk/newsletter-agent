@@ -24,6 +24,9 @@
 1. **Freeze the window.** Start and end are fixed once per run. The Gmail query uses epoch `after:`/`before:` with a day of padding, and Python enforces `start <= internalDate < end` exactly.
 2. **List every page** through `search_emails`, following `nextPageToken` until it runs out. IDs are deduplicated. `resultSizeEstimate` is never used as a count.
 3. **Read metadata only** through `read_email(mode="metadata")`, with headers matched case-insensitively. Results are cached, since Gmail message content is immutable.
+   - **In parallel, in order:** each page's new IDs are read 16 at a time, with up to 8 reads in flight (`READ_CONCURRENCY`), and the results are applied in listing order. Duplicates, the `--max-messages` cap, and "an ID counts only once its read finished" behave exactly as with one-at-a-time reads, and the report does not depend on which read finished first. Body excerpts for classification and briefing texts are read the same way.
+   - **Server side:** the two MCP tools are async and run Google's blocking client in worker threads (`SERVER_THREADS = 8`), each with its own Gmail client, because httplib2 is not thread-safe. Eight parallel reads stay well under Gmail's per-user rate limit.
+   - **Rate limits:** if a read is still rate-limited after Google's own retries, the client switches to slow mode for the rest of the run (one read at a time, backing off 2, 4, then 8 seconds) before giving up, and the report says so.
 4. **Triage** with Python rules on headers, which decide what may be sent to the model (see [privacy.md](privacy.md)).
 5. **Preflight:** counts, cache hits, and a token estimate, with no model calls.
 6. **Approval and budget:** one confirmation, then a hard limit on calls and tokens, checked before every call using the full output reservation.

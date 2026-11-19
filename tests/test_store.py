@@ -118,8 +118,11 @@ def test_a_hard_kill_mid_scan_leaves_a_sound_database_and_resume_completes(tmp_p
     try:
         deadline = time.monotonic() + 30
         while time.monotonic() < deadline:
-            if (directory / DATABASE_NAME).exists() and database_rows(directory)["metadata"] >= 60:
-                break
+            try:
+                if (directory / DATABASE_NAME).exists() and database_rows(directory)["metadata"] >= 60:
+                    break
+            except sqlite3.OperationalError:
+                pass  # The child has created the file but not the tables yet.
             time.sleep(0.05)
         else:
             pytest.fail("The scan never saved 60 records.")

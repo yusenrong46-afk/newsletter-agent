@@ -120,7 +120,7 @@ Details: [docs/privacy.md](docs/privacy.md).
 - It inventories *observed* email. It doesn't prove what you're subscribed to or whether anything is paid.
 - A newsletter with no mailing-list headers and fewer than 3 messages in the window isn't classified. The report lists those senders.
 - One publication using two sender addresses appears as two groups.
-- The first full scan reads messages one at a time, at roughly 3 per second. Reruns use the cache.
+- The first full scan reads up to 8 messages at a time: about 4 to 5 minutes for 5,000 messages, where version 0.1 took about 28. Reruns use the cache.
 - Scheduling is macOS only; on Linux the `schedule` command prints a cron line instead. There's no hosted or multi-user version, by design.
 
 ## Development
