@@ -116,7 +116,7 @@ def test_linux_installs_a_persistent_systemd_user_timer(home, monkeypatch):
     service = (schedule.systemd_dir() / "newsletter-agent-briefing.service").read_text(encoding="utf-8")
     assert "OnCalendar=*-*-* 06:45:00" in timer and "Persistent=true" in timer
     assert '"-m" "newsletter_agent" "brief" "--scheduled"' in service
-    assert f"NEWSLETTER_AGENT_HOME={config.app_home()}" in service
+    assert f"Environment={schedule.systemd_quote(f'NEWSLETTER_AGENT_HOME={config.app_home()}')}" in service
     assert runner.commands == [["systemctl", "--user", "daemon-reload"],
                                ["systemctl", "--user", "enable", "--now", "newsletter-agent-briefing.timer"]]
     assert auto_approve() and schedule.is_scheduled()

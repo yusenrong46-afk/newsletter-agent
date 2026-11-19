@@ -200,5 +200,5 @@ def import_legacy_data(project_dir: Path) -> list[str]:
         destination.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
         shutil.copyfile(source, destination)
         os.chmod(destination, 0o600)
-        copied.append(str(destination.relative_to(app_home())))
+        copied.append(destination.relative_to(app_home()).as_posix())
     return copied

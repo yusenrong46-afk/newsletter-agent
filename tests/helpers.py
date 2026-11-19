@@ -145,7 +145,10 @@ def run_workflow(tmp_path, google, fake_openai=None, confirm=lambda preflight: T
             return await run_inventory(gmail, InventoryOptions(**options), store,
                                        openai_factory=lambda: fake_openai, confirm=confirm, now=now)
 
-    return asyncio.run(go()), fake_openai
+    try:
+        return asyncio.run(go()), fake_openai
+    finally:
+        store.close()  # Windows cannot delete or replace a database file that is still open.
 
 
 def all_groups(report):

@@ -17,7 +17,7 @@ import time
 from mcp.shared.memory import create_connected_server_and_client_session
 
 from helpers import NOW, FakeOpenAI, SlowGmail, many_newsletters, run_workflow
-from newsletter_agent import gmail_server
+from newsletter_agent import gmail_server, scan
 from newsletter_agent.demo import SyntheticGmail, http_error
 from newsletter_agent.gmail_client import READ_CONCURRENCY, GmailMcpClient, gather_in_order
 from newsletter_agent.gmail_server import build_mcp_server
@@ -64,14 +64,21 @@ def test_reads_overlap_and_never_exceed_the_limit(tmp_path):
     assert 1 < google.peak_in_flight <= READ_CONCURRENCY
 
 
-def test_a_slow_mailbox_scans_in_well_under_half_the_sequential_time(tmp_path):
-    messages, latency = 120, 0.025
-    google = SlowGmail(many_newsletters(messages), latency=latency, page_size=500)
-    start = time.perf_counter()
-    report, _ = run_workflow(tmp_path, google, preflight=True)
-    elapsed = time.perf_counter() - start
-    assert report["counts"]["discovered"] == messages
-    assert elapsed < 0.4 * messages * latency, f"{elapsed:.2f}s"
+def test_a_slow_mailbox_scans_in_well_under_half_the_sequential_time(tmp_path, monkeypatch):
+    """Compared with one-at-a-time reads on the same machine, so slow CI runners do not matter."""
+
+    def timed_scan(directory):
+        google = SlowGmail(many_newsletters(80), latency=0.03, page_size=500)
+        start = time.perf_counter()
+        report, _ = run_workflow(directory, google, preflight=True, quiet=True)
+        assert report["counts"]["discovered"] == 80
+        return time.perf_counter() - start, google.peak_in_flight
+
+    parallel, peak = timed_scan(tmp_path / "parallel")
+    monkeypatch.setattr(scan, "READ_CHUNK", 1)  # Read one email at a time, like v0.1.
+    sequential, sequential_peak = timed_scan(tmp_path / "sequential")
+    assert (peak, sequential_peak) == (READ_CONCURRENCY, 1)
+    assert parallel < 0.5 * sequential, f"parallel {parallel:.2f}s vs sequential {sequential:.2f}s"
 
 
 def test_body_reads_for_classification_also_run_in_parallel(tmp_path):
