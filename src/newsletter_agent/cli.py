@@ -23,7 +23,11 @@ def command_setup(args) -> int:
         ("Google OAuth client", (credentials / "client_secret.json").exists(),
          f"save your Desktop OAuth client JSON as {credentials / 'client_secret.json'} (docs/setup-google.md)"),
         ("Gmail authorization", (credentials / "token.json").exists(), "run: newsletter-agent login"),
-        ("OpenAI API key", config.has_api_key(), f"set OPENAI_API_KEY or put OPENAI_API_KEY=... in {config.env_file()}"),
+        (
+            "OpenAI API key",
+            config.has_api_key(),
+            f"set OPENAI_API_KEY or put OPENAI_API_KEY=... in {config.env_file()}",
+        ),
         ("Inventory report", latest_report_path() is not None, "run: newsletter-agent inventory --preflight"),
         ("Daily briefing schedule", plist_path().exists(), "optional: newsletter-agent schedule 07:00"),
     ]
@@ -138,7 +142,9 @@ def build_parser() -> argparse.ArgumentParser:
     inventory.add_argument("--preflight", action="store_true", help="Scan and estimate only; no OpenAI calls")
     inventory.add_argument("--max-messages", type=int, help="Stop after this many in-scope messages (partial)")
     inventory.add_argument("--resume", action="store_true", help="Continue the saved window, reusing finished work")
-    inventory.add_argument("--yes", action="store_true", help="Approve sending email content to OpenAI without a prompt")
+    inventory.add_argument(
+        "--yes", action="store_true", help="Approve sending email content to OpenAI without a prompt"
+    )
     inventory.add_argument("--max-model-calls", type=int, default=DEFAULT_MAX_MODEL_CALLS, help="Hard limit per run")
     inventory.add_argument("--max-tokens", type=int, default=DEFAULT_MAX_TOKENS, help="Hard limit per run")
     inventory.set_defaults(handler=command_inventory)

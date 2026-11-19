@@ -2,7 +2,7 @@
 
 import re
 
-from helpers import WINDOW_START_MS, DAY_MS, FakeOpenAI, fake_gmail, group_by_key, message, newsletter, run_workflow
+from helpers import DAY_MS, WINDOW_START_MS, FakeOpenAI, fake_gmail, group_by_key, message, newsletter, run_workflow
 from newsletter_agent.classify import ALL_CATEGORIES, ClassificationBatch, MessageClassification
 from newsletter_agent.html_report import page, render_html_report
 from newsletter_agent.report import check_reconciliation

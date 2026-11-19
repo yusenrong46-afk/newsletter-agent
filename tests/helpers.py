@@ -7,7 +7,7 @@ demo module) and OpenAI (FakeOpenAI below). No test contacts Gmail or OpenAI.
 
 import asyncio
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from types import SimpleNamespace
 
 from mcp.shared.memory import create_connected_server_and_client_session
@@ -21,7 +21,7 @@ from newsletter_agent.inventory import run_inventory
 from newsletter_agent.scan import InventoryOptions
 from newsletter_agent.store import InventoryStore
 
-NOW = datetime(2026, 6, 1, 12, 0, tzinfo=timezone.utc)
+NOW = datetime(2026, 6, 1, 12, 0, tzinfo=UTC)
 NOW_MS = int(NOW.timestamp() * 1000)
 DAY_MS = 86_400_000
 WINDOW_START_MS = NOW_MS - 90 * DAY_MS

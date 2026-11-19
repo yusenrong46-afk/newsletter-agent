@@ -44,7 +44,11 @@ def test_import_legacy_copies_privately_and_never_overwrites(tmp_path):
     (config.credentials_dir() / "token.json").write_text("newer-token")  # Already present: keep it.
     copied = config.import_legacy_data(old)
 
-    assert sorted(copied) == ["credentials/.env", "inventory/classification_cache.json", "inventory/reports/inventory-1.json"]
+    assert sorted(copied) == [
+        "credentials/.env",
+        "inventory/classification_cache.json",
+        "inventory/reports/inventory-1.json",
+    ]
     assert (config.credentials_dir() / "token.json").read_text() == "newer-token"
     for name in copied:
         assert stat.S_IMODE((config.app_home() / name).stat().st_mode) == 0o600

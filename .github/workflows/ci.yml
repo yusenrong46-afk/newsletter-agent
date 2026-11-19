@@ -21,6 +21,10 @@ jobs:
           python-version: ${{ matrix.python }}
       - name: Install
         run: uv sync --locked
+      - name: Lint (ruff)
+        run: uv run ruff check .
+      - name: Type check (mypy)
+        run: uv run mypy
       - name: Tests (offline, synthetic email only)
         run: uv run pytest -q
       - name: Demo smoke test

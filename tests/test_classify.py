@@ -41,11 +41,20 @@ def test_unknown_category_is_rejected_by_the_schema(tmp_path):
     assert report["unresolved"][0]["reason"] == "invalid_output"
 
 
-@pytest.mark.parametrize("response, reason", [
-    (fake_response(None, status="incomplete", incomplete_reason="max_output_tokens"), "incomplete_response:max_output_tokens"),
-    (fake_response(None, output=[SimpleNamespace(type="message", content=[SimpleNamespace(type="refusal")])]), "refused"),
-    (fake_response(None), "invalid_output"),
-])
+@pytest.mark.parametrize(
+    "response, reason",
+    [
+        (
+            fake_response(None, status="incomplete", incomplete_reason="max_output_tokens"),
+            "incomplete_response:max_output_tokens",
+        ),
+        (
+            fake_response(None, output=[SimpleNamespace(type="message", content=[SimpleNamespace(type="refusal")])]),
+            "refused",
+        ),
+        (fake_response(None), "invalid_output"),
+    ],
+)
 def test_refused_incomplete_and_empty_responses_are_unresolved(tmp_path, response, reason):
     report, _ = run_workflow(tmp_path, fake_gmail([newsletter("a")]), FakeOpenAI(lambda items: response))
     assert report["unresolved"][0]["reason"] == reason
@@ -71,7 +80,9 @@ def test_real_sdk_request_and_response_shape(tmp_path):
                       "input_tokens_details": {"cached_tokens": 0}, "output_tokens_details": {"reasoning_tokens": 0}},
         })
 
-    client = openai.AsyncOpenAI(api_key="test-key", http_client=httpx.AsyncClient(transport=httpx.MockTransport(fake_api)))
+    client = openai.AsyncOpenAI(
+        api_key="test-key", http_client=httpx.AsyncClient(transport=httpx.MockTransport(fake_api))
+    )
     report, _ = run_workflow(tmp_path, fake_gmail([newsletter("a")]), client)
     body = captured["body"]
     assert captured["path"].endswith("/responses")

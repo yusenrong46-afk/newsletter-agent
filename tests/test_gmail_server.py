@@ -35,7 +35,9 @@ def test_server_stdout_contains_only_protocol_messages():
 
 
 def test_tool_errors_keep_a_stable_code_without_echoing_details():
-    error = GmailToolError.from_tool_text("Error executing tool read_email: not_found: Gmail no longer has this message.")
+    error = GmailToolError.from_tool_text(
+        "Error executing tool read_email: not_found: Gmail no longer has this message."
+    )
     assert error.code == "not_found"
     assert GmailToolError.from_tool_text("something unexpected with secrets").code == "gmail_error"
     assert "secrets" not in str(GmailToolError.from_tool_text("something unexpected with secrets"))
@@ -54,14 +56,26 @@ def test_html_only_message_becomes_text_without_scripts():
 
 
 def test_nested_mime_prefers_plain_text_decodes_charset_and_skips_attachments():
-    msg = message("n", payload={"mimeType": "multipart/mixed", "parts": [
-        {"mimeType": "multipart/alternative", "parts": [
-            {"mimeType": "text/plain", "headers": [{"name": "Content-Type", "value": 'text/plain; charset="iso-8859-1"'}],
-             "body": {"data": encode("Café news", "iso-8859-1")}},
-            {"mimeType": "text/html", "body": {"data": encode("<p>HTML version</p>")}},
-        ]},
-        {"mimeType": "text/plain", "filename": "notes.txt", "body": {"data": encode("ATTACHMENT TEXT")}},
-    ]})
+    msg = message(
+        "n",
+        payload={
+            "mimeType": "multipart/mixed",
+            "parts": [
+                {
+                    "mimeType": "multipart/alternative",
+                    "parts": [
+                        {
+                            "mimeType": "text/plain",
+                            "headers": [{"name": "Content-Type", "value": 'text/plain; charset="iso-8859-1"'}],
+                            "body": {"data": encode("Café news", "iso-8859-1")},
+                        },
+                        {"mimeType": "text/html", "body": {"data": encode("<p>HTML version</p>")}},
+                    ],
+                },
+                {"mimeType": "text/plain", "filename": "notes.txt", "body": {"data": encode("ATTACHMENT TEXT")}},
+            ],
+        },
+    )
     assert read(msg)["body"] == "Café news"
 
 

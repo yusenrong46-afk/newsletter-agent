@@ -7,7 +7,7 @@ deduplicated, and Python enforces exact time bounds with internalDate.
 import sys
 from collections import Counter
 from dataclasses import asdict, dataclass, field
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from .gmail_client import GmailMcpClient, GmailToolError, make_message_record, sender_address
 from .store import InventoryStore
@@ -45,7 +45,9 @@ class InventoryState:
     unavailable: dict[str, str] = field(default_factory=dict)
     unresolved: dict[str, str] = field(default_factory=dict)
     disappeared: list[str] = field(default_factory=list)
-    usage_total: dict[str, int] = field(default_factory=lambda: {"model_calls": 0, "input_tokens": 0, "output_tokens": 0, "total_tokens": 0})
+    usage_total: dict[str, int] = field(
+        default_factory=lambda: {"model_calls": 0, "input_tokens": 0, "output_tokens": 0, "total_tokens": 0}
+    )
 
 
 @dataclass
@@ -82,7 +84,7 @@ class InventoryRun:
 
 
 def utc_iso(moment: datetime) -> str:
-    return moment.astimezone(timezone.utc).isoformat(timespec="seconds")
+    return moment.astimezone(UTC).isoformat(timespec="seconds")
 
 
 def progress(message: str):
@@ -96,7 +98,9 @@ def build_scan_query(start_ms: int, end_ms: int) -> str:
     return f"after:{after} before:{before} -in:sent -in:drafts -in:chats"
 
 
-def start_or_resume_state(options: InventoryOptions, store: InventoryStore, now: datetime) -> tuple[InventoryState, bool]:
+def start_or_resume_state(
+    options: InventoryOptions, store: InventoryStore, now: datetime
+) -> tuple[InventoryState, bool]:
     if options.resume:
         saved = store.load_checkpoint()
         if saved is None:
@@ -207,7 +211,8 @@ async def fetch_metadata(run: InventoryRun, gmail: GmailMcpClient, message_id: s
 
 async def refresh_unread_flags(run: InventoryRun, gmail: GmailMcpClient):
     """Unread can change at any time, so ask Gmail again instead of trusting the cache."""
-    unread, page_token = set(), None
+    unread: set[str] = set()
+    page_token = None
     try:
         while True:
             page = await gmail.search(f"{run.state.query} is:unread", page_token)
@@ -219,7 +224,7 @@ async def refresh_unread_flags(run: InventoryRun, gmail: GmailMcpClient):
         progress(f"Could not refresh unread flags ({error.code}); using flags from when metadata was read.")
         return
     run.unread_ids = unread
-    run.unread_observed_at = utc_iso(datetime.now(timezone.utc))
+    run.unread_observed_at = utc_iso(datetime.now(UTC))
 
 
 def in_scope_records(run: InventoryRun) -> list[dict]:

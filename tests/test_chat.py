@@ -1,6 +1,7 @@
 """Chat: read-only tools over the saved inventory, with confirmation before reading email."""
 
 import json
+from datetime import UTC
 from types import SimpleNamespace
 
 import httpx
@@ -10,20 +11,58 @@ from newsletter_agent import chat
 from newsletter_agent.briefing import SummaryResult
 
 REPORT = {
-    "run": {"window_start": "2026-08-08", "window_end": "2026-11-06", "status": "complete",
-            "report_generated_at": "2026-11-06T12:00:00+00:00"},
-    "counts": {"publications_observed": 2, "publications_provisional": 1, "subscription_messages": 30, "subscription_unread": 20},
+    "run": {
+        "window_start": "2026-08-08",
+        "window_end": "2026-11-06",
+        "status": "complete",
+        "report_generated_at": "2026-11-06T12:00:00+00:00",
+    },
+    "counts": {
+        "publications_observed": 2,
+        "publications_provisional": 1,
+        "subscription_messages": 30,
+        "subscription_unread": 20,
+    },
     "category_breakdown": {"editorial_newsletter": 25, "promotional_subscription": 5},
     "publications_observed": [
-        {"group_key": "list:a", "name": "The Quiet Ledger", "category": "editorial_newsletter", "received_count": 10, "unread_count": 2, "status": "observed"},
-        {"group_key": "list:b", "name": "Byte Garden", "category": "editorial_newsletter", "received_count": 15, "unread_count": 15, "status": "observed"},
+        {
+            "group_key": "list:a",
+            "name": "The Quiet Ledger",
+            "category": "editorial_newsletter",
+            "received_count": 10,
+            "unread_count": 2,
+            "status": "observed",
+        },
+        {
+            "group_key": "list:b",
+            "name": "Byte Garden",
+            "category": "editorial_newsletter",
+            "received_count": 15,
+            "unread_count": 15,
+            "status": "observed",
+        },
     ],
     "publications_provisional": [
-        {"group_key": "sender:c", "name": "Mapleleaf", "category": "promotional_subscription", "received_count": 5, "unread_count": 3, "status": "provisional"},
+        {
+            "group_key": "sender:c",
+            "name": "Mapleleaf",
+            "category": "promotional_subscription",
+            "received_count": 5,
+            "unread_count": 3,
+            "status": "provisional",
+        },
     ],
     "messages": [
-        {"message_id": "m1", "group_key": "list:b", "classification": "editorial_newsletter", "internal_date": 1_778_000_000_000,
-         "publication_name": "Byte Garden", "from": "", "subject": "Issue 1", "received": "today"},
+        {
+            "message_id": "m1",
+            "group_key": "list:b",
+            "classification": "editorial_newsletter",
+            "internal_date": 1_778_000_000_000,
+            "publication_name": "Byte Garden",
+            "from": "",
+            "subject": "Issue 1",
+            "received": "today",
+        },
     ],
 }
 
@@ -55,8 +94,8 @@ def test_summarize_returns_bullets_with_sources():
 
 
 def _now():
-    from datetime import datetime, timezone
-    return datetime.fromtimestamp(1_778_000_000, tz=timezone.utc)
+    from datetime import datetime
+    return datetime.fromtimestamp(1_778_000_000, tz=UTC)
 
 
 class ScriptedClient:
@@ -103,17 +142,39 @@ def test_real_sdk_serializes_the_tool_loop():
 
     def fake_api(request):
         bodies.append(json.loads(request.content))
-        base = {"id": f"resp_{len(bodies)}", "object": "response", "created_at": 1, "model": "gpt-6-luna",
-                "status": "completed", "parallel_tool_calls": True, "tool_choice": "auto", "tools": [],
-                "usage": {"input_tokens": 5, "output_tokens": 5, "total_tokens": 10,
-                          "input_tokens_details": {"cached_tokens": 0}, "output_tokens_details": {"reasoning_tokens": 0}}}
+        base = {
+            "id": f"resp_{len(bodies)}",
+            "object": "response",
+            "created_at": 1,
+            "model": "gpt-6-luna",
+            "status": "completed",
+            "parallel_tool_calls": True,
+            "tool_choice": "auto",
+            "tools": [],
+            "usage": {
+                "input_tokens": 5,
+                "output_tokens": 5,
+                "total_tokens": 10,
+                "input_tokens_details": {"cached_tokens": 0},
+                "output_tokens_details": {"reasoning_tokens": 0},
+            },
+        }
         if len(bodies) == 1:
             output = [{"type": "reasoning", "id": "rs_1", "summary": [], "encrypted_content": "opaque"},
                       {"type": "function_call", "id": "fc_1", "call_id": "call_1", "name": "get_inventory_overview",
                        "arguments": "{}", "status": "completed"}]
         else:
-            output = [{"type": "message", "id": "msg_1", "role": "assistant", "status": "completed",
-                       "content": [{"type": "output_text", "text": "You have 2 observed publications.", "annotations": []}]}]
+            output = [
+                {
+                    "type": "message",
+                    "id": "msg_1",
+                    "role": "assistant",
+                    "status": "completed",
+                    "content": [
+                        {"type": "output_text", "text": "You have 2 observed publications.", "annotations": []}
+                    ],
+                }
+            ]
         return httpx.Response(200, json={**base, "output": output})
 
     client = openai.OpenAI(api_key="test-key", http_client=httpx.Client(transport=httpx.MockTransport(fake_api)))

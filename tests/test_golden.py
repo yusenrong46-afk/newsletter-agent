@@ -10,13 +10,13 @@ To update the snapshot after a deliberate change: UPDATE_GOLDEN=1 uv run pytest 
 import asyncio
 import json
 import os
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from newsletter_agent.demo import OfflineModel, run_demo_async
 
 GOLDEN = Path(__file__).parent / "golden" / "demo_report.json"
-NOW = datetime(2026, 6, 1, 12, 0, tzinfo=timezone.utc)
+NOW = datetime(2026, 6, 1, 12, 0, tzinfo=UTC)
 
 
 def demo_answers(output_dir: Path) -> dict:

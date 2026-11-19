@@ -2,13 +2,13 @@
 
 import asyncio
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from newsletter_agent import classify, demo
-from newsletter_agent.cli import main
 from newsletter_agent.classify import ClassificationBatch
+from newsletter_agent.cli import main
 
-NOW = datetime(2026, 11, 6, 12, 0, tzinfo=timezone.utc)
+NOW = datetime(2026, 11, 6, 12, 0, tzinfo=UTC)
 
 
 class RecordingModel(demo.OfflineModel):

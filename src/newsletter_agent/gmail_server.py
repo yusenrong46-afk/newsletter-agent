@@ -191,7 +191,7 @@ def extract_body_text(payload: dict) -> tuple[str, bool]:
     text_was_missing is True when a text part exists but Gmail did not include
     it inline, so the caller can report the body as incomplete.
     """
-    texts = {"text/plain": [], "text/html": []}
+    texts: dict[str, list[str]] = {"text/plain": [], "text/html": []}
     missing_parts = []
 
     def collect(part):
@@ -235,7 +235,7 @@ def read_message(service, message_id: str, mode: str = "full", max_chars: int = 
     message = run_gmail_request(request)
 
     payload = message.get("payload", {})
-    headers = {}
+    headers: dict[str, str] = {}
     for header in payload.get("headers", []):
         headers.setdefault(header.get("name", "").lower(), decode_mime_header(header.get("value", "")))
     label_ids = message.get("labelIds", [])

@@ -26,7 +26,7 @@ import sys
 import tempfile
 import threading
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from mcp.shared.memory import create_connected_server_and_client_session
@@ -39,7 +39,7 @@ from newsletter_agent.inventory import run_inventory
 from newsletter_agent.scan import InventoryOptions
 from newsletter_agent.store import InventoryStore
 
-NOW = datetime(2026, 6, 1, 12, 0, tzinfo=timezone.utc)
+NOW = datetime(2026, 6, 1, 12, 0, tzinfo=UTC)
 NOW_MS = int(NOW.timestamp() * 1000)
 DAY_MS = 86_400_000
 
@@ -304,8 +304,11 @@ def main(argv=None) -> int:
         print(f"[bench] {name}", file=sys.stderr, flush=True)
 
     results: dict = {
-        "label": args.label, "commit": git_commit(tree), "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
-        "python": platform.python_version(), "platform": platform.platform(terse=True),
+        "label": args.label,
+        "commit": git_commit(tree),
+        "generated_at": datetime.now(UTC).isoformat(timespec="seconds"),
+        "python": platform.python_version(),
+        "platform": platform.platform(terse=True),
     }
     step("scan speed")
     results["scan_speed"] = bench_scan_speed(scan_messages, latency_ms=30)

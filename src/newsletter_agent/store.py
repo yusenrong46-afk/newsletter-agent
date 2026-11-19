@@ -4,8 +4,9 @@ import fcntl
 import json
 import os
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
+from typing import TextIO
 
 from . import config
 
@@ -22,15 +23,17 @@ class InventoryStore:
                 raise ValueError(f"Refusing to use a symlink for private data: {folder}")
             folder.mkdir(mode=0o700, parents=True, exist_ok=True)
             os.chmod(folder, 0o700)
-        self._lock_file = None
+        self._lock_file: TextIO | None = None
         self.metadata = self._load_json("metadata_cache.json", {})
         self.classifications = self._load_json("classification_cache.json", {})
 
     def lock(self):
         """Stop two runs (say, a scheduled briefing and a manual inventory) sharing the caches."""
-        self._lock_file = open(self.directory / ".lock", "w")
+        # Kept open on purpose: the lock lasts until unlock() closes the file.
+        lock_file = open(self.directory / ".lock", "w")  # noqa: SIM115
+        self._lock_file = lock_file
         try:
-            fcntl.flock(self._lock_file, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            fcntl.flock(lock_file, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError:
             raise ValueError("Another newsletter-agent run is using this data. Try again when it finishes.") from None
 
@@ -65,9 +68,13 @@ class InventoryStore:
         self._save_json(self.checkpoint_name, state_dict)
 
     def save_report(self, report: dict, text: str, html: str) -> list[Path]:
-        stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
+        stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%S%fZ")
         paths = []
-        for suffix, content in (("json", json.dumps(report, ensure_ascii=False, indent=1)), ("md", text), ("html", html)):
+        for suffix, content in (
+            ("json", json.dumps(report, ensure_ascii=False, indent=1)),
+            ("md", text),
+            ("html", html),
+        ):
             path = self.reports_directory / f"inventory-{stamp}.{suffix}"
             config.write_private_file(path, content)
             paths.append(path)

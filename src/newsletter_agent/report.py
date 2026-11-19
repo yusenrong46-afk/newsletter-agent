@@ -7,7 +7,7 @@ supplies labels and names only.
 import re
 from collections import Counter, defaultdict
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from email.utils import parseaddr
 
 from . import config
@@ -58,7 +58,9 @@ def build_group(key: str, messages: list[dict], other_messages: list[dict], zone
         "unread_count": sum(1 for m in messages if m["unread"]),
         "confidence": most_common(m["result"]["confidence"] for m in messages),
         "low_confidence_count": sum(1 for m in messages if m["result"]["confidence"] == "low"),
-        "grouping_basis": f"List-ID {key.removeprefix('list:')}" if is_list_group else "exact sender address, no List-ID",
+        "grouping_basis": f"List-ID {key.removeprefix('list:')}"
+        if is_list_group
+        else "exact sender address, no List-ID",
         "other_messages_same_identity": dict(Counter(m["result"]["classification"] for m in other_messages)),
         "example": {
             "subject": newest["record"]["subject"],
@@ -134,14 +136,24 @@ def build_notes(run: InventoryRun, counts: dict, body_statuses: Counter) -> list
         "Publication counts are grouped by Python rules; categories and names are model judgments.",
     ]
     if counts["not_candidates"]:
-        notes.append(f"{counts['not_candidates']} in-scope messages had no bulk-mail signal and were not sent to OpenAI. "
-                     "They are unclassified, not proven non-newsletters.")
+        notes.append(
+            f"{counts['not_candidates']} in-scope messages had no bulk-mail signal and were not sent to OpenAI. "
+            "They are unclassified, not proven non-newsletters."
+        )
     if body_statuses["truncated"]:
-        notes.append(f"{body_statuses['truncated']} messages were classified from a body excerpt ({EXCERPT_CHARS} characters at most).")
+        notes.append(
+            f"{body_statuses['truncated']} messages were classified from a body excerpt "
+            f"({EXCERPT_CHARS} characters at most)."
+        )
     if body_statuses["withheld"]:
-        notes.append(f"{body_statuses['withheld']} messages were classified from headers only, because no bulk signal justified sending the body.")
+        notes.append(
+            f"{body_statuses['withheld']} messages were classified from headers only, "
+            "because no bulk signal justified sending the body."
+        )
     if body_statuses["unavailable"]:
-        notes.append(f"{body_statuses['unavailable']} messages had no readable body and were classified from headers only.")
+        notes.append(
+            f"{body_statuses['unavailable']} messages had no readable body and were classified from headers only."
+        )
     if run.message_cap_reached:
         notes.append(f"Stopped at the --max-messages limit of {run.options.max_messages}. Coverage is partial.")
     if not run.listing_complete and not run.message_cap_reached:
@@ -151,13 +163,21 @@ def build_notes(run: InventoryRun, counts: dict, body_statuses: Counter) -> list
     if run.interrupted:
         notes.append("The run was interrupted. Use --resume to continue.")
     if run.state.disappeared:
-        notes.append(f"{len(run.state.disappeared)} messages seen earlier are no longer listed and were removed from all counts.")
+        notes.append(
+            f"{len(run.state.disappeared)} messages seen earlier are no longer listed and were removed from all counts."
+        )
     if run.state.unavailable:
-        notes.append(f"{len(run.state.unavailable)} listed messages could not be read, probably because they were deleted during the scan.")
+        notes.append(
+            f"{len(run.state.unavailable)} listed messages could not be read, "
+            "probably because they were deleted during the scan."
+        )
     if run.fabricated_ids:
         notes.append(f"The model returned {run.fabricated_ids} IDs that were not in its input; they were discarded.")
     if run.calls_without_usage:
-        notes.append(f"{run.calls_without_usage} model calls returned no usable usage data, so actual token totals are understated.")
+        notes.append(
+            f"{run.calls_without_usage} model calls returned no usable usage data, "
+            "so actual token totals are understated."
+        )
     if run.unread_ids is None:
         notes.append("Unread flags could not be refreshed; they reflect when each message's metadata was read.")
     return notes
@@ -180,7 +200,7 @@ def collect_outcomes(run: InventoryRun) -> Outcomes:
     records = in_scope_records(run)
     triage = triage_messages(records)
 
-    excluded = Counter()
+    excluded: Counter[str] = Counter()
     for message_id in state.discovered:
         record = run.store.metadata.get(message_id)
         if record and message_id not in state.unavailable:
@@ -188,7 +208,10 @@ def collect_outcomes(run: InventoryRun) -> Outcomes:
             if reason:
                 excluded[reason] += 1
 
-    classified, unresolved, not_yet, not_candidate_senders = [], [], [], Counter()
+    classified: list[dict] = []
+    unresolved: list[dict] = []
+    not_yet: list[str] = []
+    not_candidate_senders: Counter[str] = Counter()
     for record in records:
         decision = triage[record["id"]]
         if decision == "not_candidate":
@@ -198,7 +221,9 @@ def collect_outcomes(run: InventoryRun) -> Outcomes:
         if result:
             classified.append({"record": record, "result": result, "unread": is_unread(run, record)})
         elif record["id"] in state.unresolved:
-            unresolved.append({"message_id": record["id"], "subject": record["subject"], "reason": state.unresolved[record["id"]]})
+            unresolved.append(
+                {"message_id": record["id"], "subject": record["subject"], "reason": state.unresolved[record["id"]]}
+            )
         else:
             not_yet.append(record["id"])
     return Outcomes(records, excluded, classified, unresolved, not_yet, not_candidate_senders)
@@ -247,7 +272,7 @@ def build_report(run: InventoryRun) -> dict:
             "status": decide_status(run, counts),
             "resumed": run.resumed,
             "run_started_at": state.started_at,
-            "report_generated_at": utc_iso(datetime.now(timezone.utc)),
+            "report_generated_at": utc_iso(datetime.now(UTC)),
             "unread_observed_at": run.unread_observed_at,
             "window_start": display_time(state.window_start_ms, zone),
             "window_end": display_time(state.window_end_ms, zone),
@@ -262,7 +287,9 @@ def build_report(run: InventoryRun) -> dict:
         "counts": counts,
         "denominators": {
             "category_breakdown": "classified messages",
-            "publication_groups": "classified messages in editorial_newsletter, promotional_subscription, or product_update",
+            "publication_groups": (
+                "classified messages in editorial_newsletter, promotional_subscription, or product_update"
+            ),
             "in_scope_unread": "all in-scope messages, classified or not",
         },
         "category_breakdown": categories,
@@ -271,7 +298,9 @@ def build_report(run: InventoryRun) -> dict:
         "possible_duplicates": find_possible_duplicates(groups),
         "unresolved": outcomes.unresolved,
         "unavailable": [{"message_id": key, "reason": value} for key, value in sorted(state.unavailable.items())],
-        "not_candidate_senders": [{"sender": s, "messages": n} for s, n in outcomes.not_candidate_senders.most_common()],
+        "not_candidate_senders": [
+            {"sender": s, "messages": n} for s, n in outcomes.not_candidate_senders.most_common()
+        ],
         "messages": [
             {
                 "message_id": m["record"]["id"], "thread_id": m["record"]["thread_id"],
@@ -303,20 +332,23 @@ def render_preflight(preflight: dict) -> str:
     """Show only aggregate numbers: no senders or subjects."""
     budget = preflight["budget"]
     fits = "fits" if preflight["fits_budget"] else "MAY NOT FIT; the run would stop with a partial report"
-    return "\n".join([
-        "Preflight (no email has been sent to OpenAI)",
-        f"  Unique IDs listed:              {preflight['unique_ids_listed']}",
-        f"  In-scope messages:              {preflight['in_scope_messages']}",
-        f"  With bulk-mail signals:         {preflight['bulk_signal_messages']}",
-        f"  Repeat senders, no bulk signal: {preflight['recurring_sender_only_messages']} (headers only)",
-        f"  Will not be sent to OpenAI:     {preflight['not_sent_to_openai']}",
-        f"  Already in cache:               {preflight['already_classified_in_cache']}",
-        f"  To classify now:                {preflight['messages_to_classify']} in {preflight['batches']} batches",
-        f"  Estimated input tokens:         {preflight['estimated_input_tokens']:,}",
-        f"  Maximum output tokens:          {preflight['maximum_output_tokens']:,}",
-        f"  Budget:                         {budget['max_model_calls']} calls, {budget['max_tokens']:,} tokens ({fits})",
-        f"  Assumptions: {preflight['assumptions']}",
-    ])
+    return "\n".join(
+        [
+            "Preflight (no email has been sent to OpenAI)",
+            f"  Unique IDs listed:              {preflight['unique_ids_listed']}",
+            f"  In-scope messages:              {preflight['in_scope_messages']}",
+            f"  With bulk-mail signals:         {preflight['bulk_signal_messages']}",
+            f"  Repeat senders, no bulk signal: {preflight['recurring_sender_only_messages']} (headers only)",
+            f"  Will not be sent to OpenAI:     {preflight['not_sent_to_openai']}",
+            f"  Already in cache:               {preflight['already_classified_in_cache']}",
+            f"  To classify now:                {preflight['messages_to_classify']} in {preflight['batches']} batches",
+            f"  Estimated input tokens:         {preflight['estimated_input_tokens']:,}",
+            f"  Maximum output tokens:          {preflight['maximum_output_tokens']:,}",
+            f"  Budget:                         {budget['max_model_calls']} calls, "
+            f"{budget['max_tokens']:,} tokens ({fits})",
+            f"  Assumptions: {preflight['assumptions']}",
+        ]
+    )
 
 
 def render_group(group: dict) -> list[str]:
@@ -325,7 +357,8 @@ def render_group(group: dict) -> list[str]:
         f"    Category: {group['category']} | Confidence: {group['confidence']} ({group['low_confidence_count']} low)",
         f"    Senders: {', '.join(group['senders'])}",
         f"    Grouped by: {group['grouping_basis']}",
-        f"    Example: \"{group['example']['subject']}\" ({group['example']['received']}, message {group['example']['message_id']})",
+        f'    Example: "{group["example"]["subject"]}" '
+        f"({group['example']['received']}, message {group['example']['message_id']})",
     ]
     if group["provisional_reason"]:
         lines.append(f"    Provisional because: {group['provisional_reason']}")
@@ -357,9 +390,11 @@ def render_report(report: dict) -> str:
         "## Coverage (exact counts)",
         f"Unique IDs discovered: {counts['discovered']} "
         f"(in scope {counts['in_scope']}, excluded {counts['excluded']}, unavailable {counts['unavailable']})",
-        f"Metadata this run: {counts['metadata_fetched_this_run']} fetched, {counts['metadata_from_cache_this_run']} from cache",
+        f"Metadata this run: {counts['metadata_fetched_this_run']} fetched, "
+        f"{counts['metadata_from_cache_this_run']} from cache",
         f"Candidates: {counts['candidates']} | Not sent to OpenAI: {counts['not_candidates']}",
-        f"Classified: {counts['classified']} ({counts['classified_this_run']} new, {counts['classified_from_cache']} from cache)",
+        f"Classified: {counts['classified']} "
+        f"({counts['classified_this_run']} new, {counts['classified_from_cache']} from cache)",
         f"Unresolved: {counts['unresolved']} | Not yet classified: {counts['not_yet_classified']}",
         f"All in-scope unread: {counts['in_scope_unread']}",
         f"Failures: {len(run['failures'])}",

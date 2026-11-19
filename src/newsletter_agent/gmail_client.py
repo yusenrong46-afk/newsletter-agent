@@ -108,12 +108,11 @@ async def open_gmail_client():
     from mcp import ClientSession
     from mcp.client.stdio import stdio_client
 
-    async with stdio_client(gmail_server_parameters()) as (reader, writer):
-        async with ClientSession(reader, writer) as session:
-            await session.initialize()
-            client = GmailMcpClient(session)
-            await client.verify_tools()
-            yield client
+    async with stdio_client(gmail_server_parameters()) as (reader, writer), ClientSession(reader, writer) as session:
+        await session.initialize()
+        client = GmailMcpClient(session)
+        await client.verify_tools()
+        yield client
 
 
 async def check_connection(live: bool = False):

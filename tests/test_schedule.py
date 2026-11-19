@@ -1,7 +1,6 @@
 """Scheduling needs explicit consent and never runs launchctl in tests."""
 
 import plistlib
-from pathlib import Path
 from types import SimpleNamespace
 
 import pytest

@@ -17,14 +17,15 @@ import shutil
 import sys
 import tempfile
 import tomllib
-from datetime import tzinfo
+from datetime import UTC, tzinfo
 from pathlib import Path
+from typing import Any
 from zoneinfo import ZoneInfo
 
 GMAIL_SCOPES = ["https://www.googleapis.com/auth/gmail.readonly"]
 MODEL = "gpt-6-luna"
 
-DEFAULT_CONFIG = {
+DEFAULT_CONFIG: dict[str, Any] = {
     "display_timezone": "",  # Empty means this computer's time zone.
     "briefing": {
         "time": "07:00",
@@ -90,7 +91,10 @@ def write_private_file(path: Path, text: str):
 
 def load_config() -> dict:
     """Read config.toml on top of the defaults. A missing file means all defaults."""
-    config = {"display_timezone": DEFAULT_CONFIG["display_timezone"], "briefing": dict(DEFAULT_CONFIG["briefing"])}
+    config: dict[str, Any] = {
+        "display_timezone": DEFAULT_CONFIG["display_timezone"],
+        "briefing": dict(DEFAULT_CONFIG["briefing"]),
+    }
     path = app_home() / "config.toml"
     if path.exists():
         saved = tomllib.loads(path.read_text(encoding="utf-8"))
@@ -128,7 +132,7 @@ def display_zone() -> tzinfo:
             return ZoneInfo(name)
         except (ZoneInfoNotFoundError, ValueError):
             print(f"Warning: unknown display_timezone {name!r} in config.toml; using this computer's.", file=sys.stderr)
-    return datetime.now().astimezone().tzinfo
+    return datetime.now().astimezone().tzinfo or UTC
 
 
 # --- OpenAI key -------------------------------------------------------------
