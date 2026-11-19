@@ -10,6 +10,8 @@ It runs on your own computer, reads Gmail read-only through a local [MCP](https:
 
 **[→ See the live demo report](https://yusenrong46-afk.github.io/newsletter-agent/)** · [demo briefing](https://yusenrong46-afk.github.io/newsletter-agent/briefing.html). Both are built from a synthetic mailbox by CI.
 
+**New in 0.2:** about 6× faster first scans, a SQLite store, Windows and Linux support, a measured accuracy eval, and cleanup suggestions. See the [animated before/after report](docs/upgrade-report.html) ([live](https://yusenrong46-afk.github.io/newsletter-agent/upgrade-report.html)).
+
 ![Demo inventory report](docs/images/report.png)
 
 ## What it does

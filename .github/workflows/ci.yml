@@ -38,6 +38,9 @@ jobs:
         run: uv run newsletter-agent demo --output site
       - name: Quality eval (offline stand-in)
         run: uv run newsletter-agent eval --output site/eval
+      - name: Add the upgrade report to the site
+        if: matrix.publish
+        run: cp docs/upgrade-report.html site/upgrade-report.html
       - name: Upload demo site
         if: matrix.publish
         uses: actions/upload-pages-artifact@v5

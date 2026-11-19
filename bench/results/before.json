@@ -145,13 +145,13 @@
   }
  },
  "code_health": {
-  "ruff_findings": 110,
+  "ruff_findings": 107,
   "mypy_errors": 20,
   "tests_passed": 94,
   "tests_failed": 0,
-  "tests_seconds": 6.2,
+  "tests_seconds": 5.8,
   "settings": {
-   "ruff": "ruff 0.17.6 --line-length 120 --select E,F,W,B,UP,SIM,I --target-version py311",
+   "ruff": "ruff 0.17.6 --line-length 120 --select E,F,W,B,UP,SIM,I --target-version py311 --config lint.isort.known-first-party = ['newsletter_agent', 'helpers']",
    "mypy": "mypy 2.4.1 --python-version 3.11 --check-untyped-defs --ignore-missing-imports"
   }
  },
@@ -174,5 +174,9 @@
    "whole_file_rewrites": 85,
    "seconds": 12.5
   }
- ]
+ ],
+ "features": {
+  "cleanup_suggestions": [],
+  "weekly": []
+ }
 }

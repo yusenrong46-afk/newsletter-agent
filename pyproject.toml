@@ -1,6 +1,6 @@
 [project]
 name = "newsletter-agent"
-version = "0.1.0"
+version = "0.2.0"
 description = "Inventory the newsletters in your Gmail and get a daily briefing. Read-only, local, budget-capped."
 readme = "README.md"
 license = "MIT"
@@ -53,6 +53,10 @@ target-version = "py311"
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "B", "UP", "SIM", "I"]
+
+[tool.ruff.lint.per-file-ignores]
+# A page template: its long lines are HTML and CSS text.
+"bench/make_report.py" = ["E501"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["newsletter_agent", "helpers"]

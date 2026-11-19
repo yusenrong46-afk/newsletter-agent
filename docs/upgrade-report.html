@@ -1,0 +1,402 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Measured before/after results of the newsletter-agent 0.2 upgrade.">
+<title>newsletter-agent 0.2 Upgrade</title>
+<style>
+:root {
+  --bg: #F4F6F9; --surface: #FFFFFF; --ink: #17202F; --muted: #586379; --line: #D9DEE8;
+  --accent: #2747D2; --accent-soft: #E7ECFD; --before: #9A5B3C; --before-soft: #F6E9E1;
+  --good: #1D7F55; --good-soft: #DFF2E8; --warn: #A86A12; --on-fill: #FFFFFF;
+  --font: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI Variable Text", "Segoe UI", Roboto, sans-serif;
+  --display: "Avenir Next", "Segoe UI Variable Display", "Segoe UI", ui-sans-serif, system-ui, sans-serif;
+  --mono: ui-monospace, "SFMono-Regular", "Cascadia Mono", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F131B; --surface: #161C27; --ink: #E6E9F0; --muted: #9AA4B7; --line: #2A3243;
+    --accent: #8098FF; --accent-soft: #1D2643; --before: #E39A74; --before-soft: #3A251B;
+    --good: #4FC48D; --good-soft: #15342A; --warn: #E2AA4E; --on-fill: #0F131B; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F131B; --surface: #161C27; --ink: #E6E9F0; --muted: #9AA4B7; --line: #2A3243;
+  --accent: #8098FF; --accent-soft: #1D2643; --before: #E39A74; --before-soft: #3A251B;
+  --good: #4FC48D; --good-soft: #15342A; --warn: #E2AA4E; --on-fill: #0F131B; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font: 17px/1.6 var(--font); margin: 0;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 40px 80px; }
+.wrap { max-width: 940px; margin: 0 auto; display: grid; gap: 72px; }
+section, header { display: grid; gap: 18px; min-width: 0; }
+h1, h2, h3 { font-family: var(--display); margin: 0; line-height: 1.15; text-wrap: balance; }
+h1 { font-size: clamp(2.1rem, 5vw, 3.2rem); font-weight: 800; letter-spacing: -0.02em; }
+h2 { font-size: 1.7rem; font-weight: 700; }
+h3 { font-size: 1.05rem; font-weight: 700; }
+p { margin: 0; max-width: 68ch; }
+.lede { font-size: 1.15rem; }
+.muted { color: var(--muted); }
+.small { font-size: 0.88rem; }
+.eyebrow { font-family: var(--mono); font-size: 0.74rem; letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--accent); font-weight: 600; }
+.num { font-variant-numeric: tabular-nums; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 18px 20px; min-width: 0; }
+.tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; background: var(--line);
+  border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+.tile { background: var(--surface); padding: 14px 16px; display: grid; gap: 2px; align-content: start; }
+.tile b { font-family: var(--display); font-size: 1.9rem; font-weight: 800; color: var(--accent); }
+.tile span { font-size: 0.88rem; color: var(--muted); }
+.big { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 14px; }
+.big b { font-family: var(--display); font-size: clamp(2.4rem, 7vw, 3.6rem); font-weight: 800; color: var(--accent); line-height: 1; }
+.big span { color: var(--muted); }
+button.replay { font: 600 0.85rem var(--font); color: var(--accent); background: var(--accent-soft); border: 0;
+  border-radius: 999px; padding: 6px 14px; cursor: pointer; width: fit-content; }
+button.replay:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* 1. Scan race */
+.lanes { display: grid; gap: 18px; }
+.lane { display: grid; gap: 8px; }
+.lane-head { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; align-items: baseline; }
+.lane-head strong { font-family: var(--display); }
+.lane-head .clock { font-family: var(--mono); font-size: 0.85rem; color: var(--muted); }
+.envelopes { display: grid; grid-template-columns: repeat(20, 1fr); gap: 4px; }
+.env { aspect-ratio: 1.45; border-radius: 3px; background: var(--done); max-width: 100%; }
+.lane.before { --done: var(--before); --soft: var(--before-soft); }
+.lane.after { --done: var(--accent); --soft: var(--accent-soft); }
+.env.waiting { background: var(--soft); }
+.env.reading { background: var(--done); opacity: 0.45; animation: pulse 0.35s ease-in-out infinite alternate; }
+@keyframes pulse { to { opacity: 1; } }
+.track { height: 6px; background: var(--soft); border-radius: 3px; overflow: hidden; }
+.fill { height: 100%; width: 100%; background: var(--done); border-radius: 3px; }
+.slots { font-family: var(--mono); font-size: 0.78rem; color: var(--muted); }
+
+/* 2. Disk bars */
+.chart svg { display: block; width: 100%; height: auto; }
+.chart .axis { fill: var(--muted); font: 12px var(--mono); }
+.chart .grid { stroke: var(--line); stroke-width: 1; }
+.chart .bar-before { fill: var(--before); }
+.chart .bar-after { fill: var(--accent); }
+.chart .value { fill: var(--ink); font: 600 12px var(--font); }
+.chart .group-label { fill: var(--ink); font: 600 13px var(--font); }
+.chart rect { transform-box: fill-box; transform-origin: bottom; }
+.play .chart rect.bar-before, .play .chart rect.bar-after { animation: grow 1.1s cubic-bezier(.2,.7,.2,1) backwards; }
+.play .chart rect.bar-after { animation-delay: 0.35s; }
+@keyframes grow { from { transform: scaleY(0); } }
+.legend { display: flex; gap: 18px; flex-wrap: wrap; font-size: 0.88rem; color: var(--muted); }
+.legend i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; }
+
+/* 3. Counters */
+.counters { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+.counter { display: grid; gap: 4px; }
+.counter .was { font-family: var(--mono); font-size: 0.85rem; color: var(--before); text-decoration: line-through; }
+.counter b { font-family: var(--display); font-size: 2.6rem; font-weight: 800; color: var(--good); line-height: 1; }
+.counter span { color: var(--muted); font-size: 0.92rem; }
+
+/* 4. Platforms */
+.os-grid { display: grid; grid-template-columns: 120px repeat(2, 1fr); gap: 8px; align-items: stretch; }
+.os-grid .head { font-family: var(--mono); font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.08em;
+  color: var(--muted); padding: 4px 0; }
+.os-grid .os { font-weight: 700; padding: 10px 0; }
+.chip { border-radius: 10px; padding: 10px 12px; display: grid; gap: 2px; perspective: 600px; min-width: 0; }
+.chip .now { font-weight: 600; color: var(--good); }
+.chip .then { font-size: 0.82rem; color: var(--muted); }
+.chip { background: var(--good-soft); }
+.play .chip.changed { animation: flip 0.7s ease-out backwards; }
+@keyframes flip { from { transform: rotateX(90deg); background: var(--before-soft); } }
+
+/* 5. Accuracy */
+.bars { display: grid; gap: 14px; }
+.bar-row { display: grid; grid-template-columns: 210px 1fr 64px; gap: 12px; align-items: center; }
+.bar-row .label { font-size: 0.92rem; }
+.bar-row .label small { display: block; color: var(--muted); font-size: 0.8rem; }
+.bar-track { height: 14px; background: var(--line); border-radius: 7px; overflow: hidden; }
+.bar-fill { height: 100%; border-radius: 7px; transform-origin: left; }
+.bar-fill.offline { background: var(--before); }
+.bar-fill.model { background: var(--accent); }
+.bar-fill.none { background: transparent; }
+.play .bar-fill { animation: widen 1.2s cubic-bezier(.2,.7,.2,1) backwards; }
+@keyframes widen { from { transform: scaleX(0); } }
+.matrix-wrap { overflow-x: auto; }
+table.matrix { border-collapse: separate; border-spacing: 3px; font-size: 0.82rem; }
+table.matrix th { font-weight: 600; color: var(--muted); padding: 4px 6px; text-align: center; }
+table.matrix th.row { text-align: right; }
+table.matrix td { width: 52px; height: 34px; text-align: center; border-radius: 6px; background: var(--bg);
+  font-variant-numeric: tabular-nums; }
+table.matrix td.hit { background: var(--accent); color: var(--on-fill); font-weight: 700; }
+table.matrix td.miss { background: var(--before); color: var(--on-fill); font-weight: 700; }
+.play table.matrix td { animation: fade 0.5s ease-out backwards; animation-delay: calc(var(--i) * 40ms); }
+@keyframes fade { from { opacity: 0; transform: scale(0.6); } }
+
+/* 6. Features */
+.feature-grid { display: grid; grid-template-columns: 1.2fr 1fr; gap: 16px; align-items: start; }
+.cards { display: grid; gap: 8px; }
+.advice { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px;
+  display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; }
+.advice .why { grid-column: 1 / -1; font-size: 0.84rem; color: var(--muted); }
+.badge { font-size: 0.74rem; font-weight: 600; border-radius: 999px; padding: 2px 9px; height: fit-content; }
+.badge.drop { background: var(--before-soft); color: var(--before); }
+.badge.skim { background: var(--accent-soft); color: var(--accent); }
+.play .advice { animation: slide 0.6s cubic-bezier(.2,.7,.2,1) backwards; animation-delay: calc(var(--i) * 120ms); }
+@keyframes slide { from { opacity: 0; transform: translateX(-24px); } }
+.spark-list { display: grid; gap: 10px; }
+.spark-row { display: grid; grid-template-columns: 1fr 120px 64px; gap: 10px; align-items: center; font-size: 0.9rem; }
+.spark-row svg { width: 120px; height: 26px; display: block; }
+.spark-row polyline { fill: none; stroke: var(--accent); stroke-width: 2; stroke-linejoin: round; }
+.play .spark-row polyline { stroke-dasharray: 400; animation: draw 1.4s ease-out backwards; }
+@keyframes draw { from { stroke-dashoffset: 400; } to { stroke-dashoffset: 0; } }
+.trend { font-size: 0.74rem; color: var(--muted); font-family: var(--mono); }
+
+/* 7. Unchanged */
+.same { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; }
+.same div { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px;
+  display: grid; grid-template-columns: auto 1fr; gap: 0 10px; align-items: center; }
+.same .tick { color: var(--good); font-weight: 800; grid-row: span 2; font-size: 1.2rem; }
+.same b { font-variant-numeric: tabular-nums; }
+.same span { font-size: 0.84rem; color: var(--muted); }
+.play .same .tick { animation: pop 0.45s ease-out backwards; animation-delay: calc(var(--i) * 90ms); }
+@keyframes pop { from { transform: scale(0); } }
+ul.plain { margin: 0; padding-left: 20px; display: grid; gap: 6px; }
+footer { color: var(--muted); font-size: 0.86rem; border-top: 1px solid var(--line); padding-top: 18px; }
+
+@media (max-width: 720px) {
+  .tiles { grid-template-columns: repeat(2, 1fr); }
+  .counters, .feature-grid { grid-template-columns: 1fr; }
+  .bar-row { grid-template-columns: 1fr 52px; }
+  .bar-row .label { grid-column: 1 / -1; }
+  .os-grid { grid-template-columns: 84px repeat(2, 1fr); }
+  .envelopes { grid-template-columns: repeat(10, 1fr); }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+<header data-animate>
+  <span class="eyebrow">Upgrade report · v0.1 (9150bfb) → v0.2 (17a1467)</span>
+  <h1>Same answers. Much faster, sturdier, and measured.</h1>
+  <p class="lede">newsletter-agent finds the newsletters in your Gmail and writes a daily briefing. This upgrade
+  changed how it reads mail, where it keeps its notes, which computers it runs on, and how we know it is accurate.
+  The numbers below were measured on the same machine with the same synthetic mailboxes, before and after.</p>
+  
+<div class="tiles">
+  <div class="tile"><b class="num" data-from="1.0" data-to="6.5277207392197125" data-decimals="1" data-suffix="×">6.5×</b><span>faster first scan</span></div>
+  <div class="tile"><b class="num" data-from="1.0" data-to="8.407175367081377" data-decimals="1" data-suffix="×">8.4×</b><span>less written to disk (20,000 emails)</span></div>
+  <div class="tile"><b class="num" data-from="127" data-to="0" data-decimals="0" data-suffix="">0</b><span>lint and type problems (was 127)</span></div>
+  <div class="tile"><b>Same</b><span>answers on the demo mailbox</span></div>
+</div>
+</header>
+
+<section id="speed" data-animate>
+  <span class="eyebrow">1 · Reading mail</span>
+  <h2>The first scan is 6.5× faster</h2>
+  <div class="big"><b class="num" data-from="28" data-to="4.5" data-decimals="1" data-suffix=" min">4.5 min</b>
+    <span>estimated first scan of 5,000 real emails (was about
+    28 min)</span></div>
+  <p>Before, the app asked Gmail for one email and waited for the answer before asking for the next. Now it keeps
+  eight requests going at once, and still uses the answers in their original order, so the report is exactly the
+  same. If Gmail asks it to slow down, it drops to one at a time instead of failing.</p>
+  <div class="panel lanes">
+<div class="lane before" data-parallel="1" data-ms="6000" data-seconds="31.79">
+  <div class="lane-head"><strong>v0.1: one email at a time</strong><span class="clock">31.8 s</span></div>
+  <div class="envelopes" aria-hidden="true"><i class="env"></i><i class="env"></i><i class="env"></i><i class="env"></i><i class="env"></i><i class="env"></i><i class="env"></i><i class="env"></i><i class="env"></i><i class="env"></i><i class="env"></i><i class="env"></i><i class="env"></i><i class="env"></i><i class="env"></i><i class="env"></i><i class="env"></i><i class="env"></i><i class="env"></i><i class="env"></i><i class="env"></i><i class="env"></i><i class="env"></i><i class="env"></i><i class="env"></i><i class="env"></i><i class="env"></i><i class="env"></i><i class="env"></i><i class="env"></i><i class="env"></i><i class="env"></i><i class="env"></i><i class="env"></i><i class="env"></i><i class="env"></i><i class="env"></i><i class="env"></i><i class="env"></i><i class="env"></i></div>
+  <div class="track"><div class="fill"></div></div>
+  <span class="slots">1 read in flight · 32 emails/s</span>
+</div>
+<div class="lane after" data-parallel="8" data-ms="919" data-seconds="4.87">
+  <div class="lane-head"><strong>v0.2: eight at a time, results kept in order</strong><span class="clock">4.9 s</span></div>
+  <div class="envelopes" aria-hidden="true"><i class="env"></i><i class="env"></i><i class="env"></i><i class="env"></i><i class="env"></i><i class="env"></i><i class="env"></i><i class="env"></i><i class="env"></i><i class="env"></i><i class="env"></i><i class="env"></i><i class="env"></i><i class="env"></i><i class="env"></i><i class="env"></i><i class="env"></i><i class="env"></i><i class="env"></i><i class="env"></i><i class="env"></i><i class="env"></i><i class="env"></i><i class="env"></i><i class="env"></i><i class="env"></i><i class="env"></i><i class="env"></i><i class="env"></i><i class="env"></i><i class="env"></i><i class="env"></i><i class="env"></i><i class="env"></i><i class="env"></i><i class="env"></i><i class="env"></i><i class="env"></i><i class="env"></i><i class="env"></i></div>
+  <div class="track"><div class="fill"></div></div>
+  <span class="slots">8 reads in flight · 206 emails/s</span>
+</div></div>
+  <p class="muted small">Measured: 1,000 emails with 30 ms per read took
+  31.8 s before and 4.9 s after. A full run that also reads text and labels
+  300 emails: 19.1 s → 3.2 s. The real-mailbox estimate
+  assumes Gmail's usual 3 reads per second. Each lane shows 40 of the emails, at the measured relative
+  speed.</p>
+  <button class="replay" type="button">Replay</button>
+</section>
+
+<section id="disk" data-animate>
+  <span class="eyebrow">2 · Keeping notes</span>
+  <h2>8.4× less written to disk on a big mailbox</h2>
+  <p>The app remembers each email's headers so it never reads them twice. Version 0.1 kept that memory in one big file
+  and rewrote the whole file after every 500 emails, so the work grew with the square of your mailbox. Version 0.2
+  keeps it in a small database and only adds the new rows. The bigger the mailbox, the bigger the difference.</p>
+  <div class="panel chart"><svg viewBox="0 0 640 300" role="img" aria-label="Bytes written by a first scan. 1,000 emails: 1.6 MB before, 635 KB after; 5,000 emails: 17.0 MB before, 3.2 MB after; 20,000 emails: 204.7 MB before, 24.3 MB after"><line class="grid" x1="56" x2="632" y1="260.0" y2="260.0"/><text class="axis" x="48" y="264.0" text-anchor="end">0</text><line class="grid" x1="56" x2="632" y1="212.8" y2="212.8"/><text class="axis" x="48" y="216.8" text-anchor="end">50</text><line class="grid" x1="56" x2="632" y1="165.6" y2="165.6"/><text class="axis" x="48" y="169.6" text-anchor="end">100</text><line class="grid" x1="56" x2="632" y1="118.4" y2="118.4"/><text class="axis" x="48" y="122.4" text-anchor="end">150</text><line class="grid" x1="56" x2="632" y1="71.2" y2="71.2"/><text class="axis" x="48" y="75.2" text-anchor="end">200</text><line class="grid" x1="56" x2="632" y1="24.0" y2="24.0"/><text class="axis" x="48" y="28.0" text-anchor="end">250</text><text class="axis" x="48" y="14" text-anchor="end">MB</text><rect class="bar-before" x="91.7" y="258.0" width="56.0" height="2.0" rx="3"/><text class="value" x="119.7" y="252.0" text-anchor="middle">1.6 MB</text><rect class="bar-after" x="153.7" y="258.0" width="56.0" height="2.0" rx="3"/><text class="value" x="181.7" y="252.0" text-anchor="middle">635 KB</text><text class="group-label" x="150.7" y="286" text-anchor="middle">1,000 emails</text><rect class="bar-before" x="281.0" y="243.9" width="56.0" height="16.1" rx="3"/><text class="value" x="309.0" y="237.9" text-anchor="middle">17.0 MB</text><rect class="bar-after" x="343.0" y="257.0" width="56.0" height="3.0" rx="3"/><text class="value" x="371.0" y="251.0" text-anchor="middle">3.2 MB</text><text class="group-label" x="340.0" y="286" text-anchor="middle">5,000 emails</text><rect class="bar-before" x="470.3" y="66.8" width="56.0" height="193.2" rx="3"/><text class="value" x="498.3" y="60.8" text-anchor="middle">204.7 MB</text><rect class="bar-after" x="532.3" y="237.0" width="56.0" height="23.0" rx="3"/><text class="value" x="560.3" y="231.0" text-anchor="middle">24.3 MB</text><text class="group-label" x="529.3" y="286" text-anchor="middle">20,000 emails</text></svg>
+    <div class="legend"><span><i style="background:var(--before)"></i>v0.1</span>
+    <span><i style="background:var(--accent)"></i>v0.2</span></div></div>
+  <p class="muted small">Bytes passed to the disk during one first scan, measured by the operating system. Upgrading
+  keeps everything already learned: a real v0.1 data folder moved to v0.2 with 0 emails re-read and 0 model calls.
+  A hard kill in the middle of a scan leaves the database intact, and the next run picks up where it stopped.</p>
+  <button class="replay" type="button">Replay</button>
+</section>
+
+<section id="health" data-animate>
+  <span class="eyebrow">3 · Code health</span>
+  <h2>Every lint and type problem fixed, and checked on every change</h2>
+  <p>A linter catches sloppy or risky code; a type checker catches parts that don't fit together. Both now run in CI,
+  so a mistake like a misspelled name or a forgotten "nothing" value is caught before it ships.</p>
+  <div class="counters">
+    <div class="counter panel"><span class="was">107</span>
+      <b class="num" data-from="107" data-to="0" data-decimals="0" data-suffix="">0</b><span>lint findings</span></div>
+    <div class="counter panel"><span class="was">20</span>
+      <b class="num" data-from="20" data-to="0" data-decimals="0" data-suffix="">0</b><span>type errors</span></div>
+    <div class="counter panel"><span class="was">94</span>
+      <b class="num" data-from="94" data-to="154" data-decimals="0" data-suffix="">154</b><span>tests, all passing, all offline</span></div>
+  </div>
+  <p class="muted small">Same settings for both versions: ruff 0.17.6 --line-length 120 --select E,F,W,B,UP,SIM,I --target-version py311 --config lint.isort.known-first-party = [&#x27;newsletter_agent&#x27;, &#x27;helpers&#x27;];
+  mypy 2.4.1 --python-version 3.11 --check-untyped-defs --ignore-missing-imports. New tests cover failures on purpose: a hard kill mid-scan, a corrupt
+  database, rate limits, Ctrl-C with reads in flight, invented answers from the model, and failed scheduler
+  installs.</p>
+  <button class="replay" type="button">Replay</button>
+</section>
+
+<section id="platforms" data-animate>
+  <span class="eyebrow">4 · Where it runs</span>
+  <h2>Now on Windows and Linux too, with daily briefings everywhere</h2>
+  <p>Version 0.1 used a Unix-only lock, so it could not even start on Windows, and only Macs could schedule the daily
+  briefing. Now each system uses its own scheduler. A bug is fixed too: if installing the schedule failed, v0.1 still
+  switched on automatic approval.</p>
+  <div class="panel"><div class="os-grid">
+    <div></div><div class="head">Runs the app</div><div class="head">Daily briefing</div>
+    <div class="os">macOS</div><div class="chip"><span class="now">Works</span><span class="then">unchanged</span></div><div class="chip"><span class="now">launchd</span><span class="then">unchanged</span></div><div class="os">Linux</div><div class="chip"><span class="now">Works</span><span class="then">unchanged</span></div><div class="chip changed"><span class="now">systemd timer, catches up after sleep</span><span class="then">was: Copy a cron line by hand</span></div><div class="os">Windows</div><div class="chip changed"><span class="now">Works</span><span class="then">was: Could not start (Unix-only lock)</span></div><div class="chip changed"><span class="now">Task Scheduler</span><span class="then">was: None</span></div>
+  </div></div>
+  <p class="muted small">CI runs the full test suite, the demo and the eval on Linux, macOS and Windows for every pull request.</p>
+  <button class="replay" type="button">Replay</button>
+</section>
+
+<section id="accuracy" data-animate>
+  <span class="eyebrow">5 · Accuracy</span>
+  <h2>For the first time, a real accuracy number</h2>
+  <p>A new <code>eval</code> command runs the real app on 96 invented emails
+  with known answers: ordinary newsletters plus traps, such as a receipt from a newsletter brand, a friend writing
+  through a newsletter platform, emails in four languages, and two emails that try to give the AI orders.</p>
+  <div class="big"><b class="num" data-from="0" data-to="100.0" data-decimals="0" data-suffix="%">100%</b><span>of subscriptions spotted correctly
+(F1), 100% put in the right category, 0 mistakes</span></div>
+  
+<div class="panel bars">
+  <div class="bar-row"><span class="label">Is it a subscription?<small>v0.1: never measured</small></span><div class="bar-track"><div class="bar-fill none" style="width:0.0%"></div></div><span class="num">—</span></div>
+  <div class="bar-row"><span class="label">Is it a subscription?<small>offline keyword rules (CI baseline)</small></span><div class="bar-track"><div class="bar-fill offline" style="width:93.0%"></div></div><span class="num">93%</span></div>
+  <div class="bar-row"><span class="label">Is it a subscription?<small>gpt-6-luna</small></span><div class="bar-track"><div class="bar-fill model" style="width:100.0%"></div></div><span class="num">100%</span></div>
+  <div class="bar-row"><span class="label">Right category<small>offline keyword rules</small></span><div class="bar-track"><div class="bar-fill offline" style="width:76.3%"></div></div><span class="num">76.3%</span></div>
+  <div class="bar-row"><span class="label">Right category<small>gpt-6-luna</small></span><div class="bar-track"><div class="bar-fill model" style="width:100.0%"></div></div><span class="num">100%</span></div>
+</div>
+<div class="panel matrix-wrap">
+  <h3>Where each of the 96 test emails landed (gpt-6-luna)</h3>
+  <p class="muted small">Rows are the true answer, columns what the app decided. Blue cells are right; any orange cell is
+  a mistake. "Kept private" means the privacy rules never sent the email to the model, which is the right outcome
+  for personal mail.</p>
+  <table class="matrix"><thead><tr><th class="row">True label ↓ / answer →</th><th>Newsletter</th><th>Promotion</th><th>Product update</th><th>Transactional</th><th>Personal</th><th>Kept private</th></tr></thead><tbody><tr><th class="row">Newsletter</th><td class="hit" style="--i:0">38</td><td class="" style="--i:1"></td><td class="" style="--i:2"></td><td class="" style="--i:3"></td><td class="" style="--i:4"></td><td class="" style="--i:5"></td></tr><tr><th class="row">Promotion</th><td class="" style="--i:6"></td><td class="hit" style="--i:7">20</td><td class="" style="--i:8"></td><td class="" style="--i:9"></td><td class="" style="--i:10"></td><td class="" style="--i:11"></td></tr><tr><th class="row">Product update</th><td class="" style="--i:12"></td><td class="" style="--i:13"></td><td class="hit" style="--i:14">11</td><td class="" style="--i:15"></td><td class="" style="--i:16"></td><td class="" style="--i:17"></td></tr><tr><th class="row">Transactional</th><td class="" style="--i:18"></td><td class="" style="--i:19"></td><td class="" style="--i:20"></td><td class="hit" style="--i:21">20</td><td class="" style="--i:22"></td><td class="" style="--i:23"></td></tr><tr><th class="row">Personal</th><td class="" style="--i:24"></td><td class="" style="--i:25"></td><td class="" style="--i:26"></td><td class="" style="--i:27"></td><td class="hit" style="--i:28">4</td><td class="hit" style="--i:29">3</td></tr></tbody></table>
+</div>
+<p class="muted small">Honest limits: these are 96 invented, fairly clear-cut emails, and the run used
+14,441 tokens (4 calls). A perfect score on 96
+emails suggests the real error rate is low (likely under about 3%), not that it is zero.
+Real inboxes are messier. Rerun with <code>newsletter-agent eval --real-model</code>.</p>
+  <button class="replay" type="button">Replay</button>
+</section>
+
+<section id="features" data-animate>
+  <span class="eyebrow">6 · New in the report</span>
+  <h2>It now tells you what to drop, and how each newsletter is trending</h2>
+  <p>The report used to stop at counts. Now it points out newsletters you mostly don't open and shows how often each
+  one arrives week by week. It only suggests: it never unsubscribes or changes anything in Gmail. These are the demo
+  mailbox's own results.</p>
+  <div class="feature-grid">
+    <div class="cards"><div class="advice" style="--i:0"><strong>Mapleleaf Coffee</strong><span class="badge drop">Consider unsubscribing</span><span class="why">15 received, 14 still unread (93%).</span></div><div class="advice" style="--i:1"><strong>Trailhead Outfitters</strong><span class="badge drop">Consider unsubscribing</span><span class="why">12 received, 10 still unread (83%).</span></div><div class="advice" style="--i:2"><strong>Field Notes Daily</strong><span class="badge skim">Skim or reduce</span><span class="why">65 received, 51 still unread (78%).</span></div><div class="advice" style="--i:3"><strong>Byte Garden</strong><span class="badge skim">Skim or reduce</span><span class="why">26 received, 20 still unread (77%).</span></div><div class="advice" style="--i:4"><strong>The Quiet Ledger</strong><span class="badge skim">Skim or reduce</span><span class="why">14 received, 9 still unread (64%).</span></div></div>
+    <div class="panel spark-list"><h3>Emails per week, last 90 days</h3><div class="spark-row"><span>Field Notes Daily</span><svg viewBox="0 0 120 26" role="img" aria-label="Messages per week: 4, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 6"><polyline points="0.0,9.7 10.0,6.3 20.0,6.3 30.0,6.3 40.0,6.3 50.0,6.3 60.0,6.3 70.0,6.3 80.0,6.3 90.0,6.3 100.0,6.3 110.0,6.3 120.0,3.0"/></svg><span class="trend">steady</span></div><div class="spark-row"><span>Byte Garden</span><svg viewBox="0 0 120 26" role="img" aria-label="Messages per week: 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2"><polyline points="0.0,3.0 10.0,3.0 20.0,3.0 30.0,3.0 40.0,3.0 50.0,3.0 60.0,3.0 70.0,3.0 80.0,3.0 90.0,3.0 100.0,3.0 110.0,3.0 120.0,3.0"/></svg><span class="trend">steady</span></div><div class="spark-row"><span>Mapleleaf Coffee</span><svg viewBox="0 0 120 26" role="img" aria-label="Messages per week: 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 2, 1"><polyline points="0.0,13.0 10.0,13.0 20.0,13.0 30.0,13.0 40.0,13.0 50.0,3.0 60.0,13.0 70.0,13.0 80.0,13.0 90.0,13.0 100.0,13.0 110.0,3.0 120.0,13.0"/></svg><span class="trend">steady</span></div><div class="spark-row"><span>The Quiet Ledger</span><svg viewBox="0 0 120 26" role="img" aria-label="Messages per week: 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2"><polyline points="0.0,13.0 10.0,13.0 20.0,13.0 30.0,13.0 40.0,13.0 50.0,13.0 60.0,13.0 70.0,13.0 80.0,13.0 90.0,13.0 100.0,13.0 110.0,13.0 120.0,3.0"/></svg><span class="trend">steady</span></div></div>
+  </div>
+  <button class="replay" type="button">Replay</button>
+</section>
+
+<section id="unchanged" data-animate>
+  <span class="eyebrow">7 · What did not change</span>
+  <h2>The answers are identical</h2>
+  <p>A faster app is only useful if it says the same thing. On the demo mailbox, every count, category and publication
+  matched between v0.1 and v0.2, and a test now fails if they ever drift. The privacy promises are unchanged too.</p>
+  <div class="same"><div style="--i:0"><span class="tick">✓</span><b>171</b><span>emails found in 90 days</span></div><div style="--i:1"><span class="tick">✓</span><b>164</b><span>in scope</span></div><div style="--i:2"><span class="tick">✓</span><b>162</b><span>classified</span></div><div style="--i:3"><span class="tick">✓</span><b>7</b><span>publications</span></div><div style="--i:4"><span class="tick">✓</span><b>148</b><span>subscription emails</span></div><div style="--i:5"><span class="tick">✓</span><b>112</b><span>of them unread</span></div><div style="--i:6"><span class="tick">✓</span><b>6</b><span>issues in the briefing</span></div><div style="--i:7"><span class="tick">✓</span><b>All 5</b><span>reconciliation checks pass</span></div></div>
+  <ul class="plain">
+    <li>Gmail access is still read-only, through the same two tools.</li>
+    <li>The same privacy rules decide what may reach the AI; email bodies are still never written to disk.</li>
+    <li>Paid AI work still needs your approval and stays within a hard budget.</li>
+  </ul>
+  <button class="replay" type="button">Replay</button>
+</section>
+
+<footer>
+  How this was measured: <code>bench/run_bench.py</code> ran against commit 9150bfb (v0.1) and
+  17a1467 (v0.2) on Linux-6.18.44-fc-v653-x86_64-with-glibc2.39, Python 3.13.18, using only
+  invented emails: no Gmail account and no real mail. The accuracy numbers come from <code>newsletter-agent eval</code>.
+  This page is generated by <code>bench/make_report.py</code> from the saved results.
+</footer>
+</div>
+<script>
+(function () {
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  function countUp(el) {
+    var from = Number(el.dataset.from), to = Number(el.dataset.to), decimals = Number(el.dataset.decimals || 0);
+    var suffix = el.dataset.suffix || '', start = null, duration = 1300;
+    function frame(time) {
+      if (start === null) start = time;
+      var t = Math.min(1, (time - start) / duration), eased = 1 - Math.pow(1 - t, 3);
+      el.textContent = (from + (to - from) * eased).toFixed(decimals) + suffix;
+      if (t < 1) requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
+  }
+
+  function race(section) {
+    section.querySelectorAll('.lane').forEach(function (lane) {
+      var envelopes = Array.prototype.slice.call(lane.querySelectorAll('.env'));
+      var parallel = Number(lane.dataset.parallel), total = Number(lane.dataset.ms);
+      var seconds = Number(lane.dataset.seconds), fill = lane.querySelector('.fill');
+      var clock = lane.querySelector('.clock'), finalClock = clock.textContent;
+      var perRead = total / Math.ceil(envelopes.length / parallel);
+      envelopes.forEach(function (env) { env.className = 'env waiting'; });
+      fill.style.width = '0%';
+      var start = null;
+      function frame(time) {
+        if (start === null) start = time;
+        var elapsed = time - start, t = Math.min(1, elapsed / total);
+        var wave = Math.floor(elapsed / perRead);
+        envelopes.forEach(function (env, i) {
+          var envWave = Math.floor(i / parallel);
+          env.className = 'env' + (envWave < wave || t >= 1 ? '' : envWave === wave ? ' reading' : ' waiting');
+        });
+        fill.style.width = (t * 100).toFixed(1) + '%';
+        clock.textContent = t < 1 ? (seconds * t).toFixed(1) + ' s' : finalClock;
+        if (t < 1) requestAnimationFrame(frame);
+      }
+      requestAnimationFrame(frame);
+    });
+  }
+
+  function play(section) {
+    if (reduce) return;
+    section.classList.remove('play');
+    void section.offsetWidth;  // Restart CSS animations.
+    section.classList.add('play');
+    section.querySelectorAll('[data-to]').forEach(countUp);
+    if (section.id === 'speed') race(section);
+  }
+
+  document.querySelectorAll('button.replay').forEach(function (button) {
+    button.addEventListener('click', function () { play(button.closest('section')); });
+  });
+  if (reduce || !('IntersectionObserver' in window)) return;
+  var observer = new IntersectionObserver(function (entries) {
+    entries.forEach(function (entry) {
+      if (entry.isIntersecting) { observer.unobserve(entry.target); play(entry.target); }
+    });
+  }, { threshold: 0.35 });
+  document.querySelectorAll('section[data-animate], header[data-animate]').forEach(function (s) { observer.observe(s); });
+})();
+</script>
+</body>
+</html>

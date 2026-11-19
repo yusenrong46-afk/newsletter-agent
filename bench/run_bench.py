@@ -47,7 +47,8 @@ DAY_MS = 86_400_000
 REAL_GMAIL_SECONDS_PER_READ = 0.33
 PROJECTION_MESSAGES = 5000
 
-RUFF_ARGS = ["--line-length", "120", "--select", "E,F,W,B,UP,SIM,I", "--target-version", "py311"]
+RUFF_ARGS = ["--line-length", "120", "--select", "E,F,W,B,UP,SIM,I", "--target-version", "py311",
+             "--config", "lint.isort.known-first-party = ['newsletter_agent', 'helpers']"]
 MYPY_ARGS = ["--python-version", "3.11", "--check-untyped-defs", "--ignore-missing-imports"]
 RUFF_VERSION = "0.17.6"
 MYPY_VERSION = "2.4.1"
@@ -257,6 +258,27 @@ def demo_answers() -> dict:
     }
 
 
+def demo_features() -> dict:
+    """What the demo report offers beyond counts (cleanup suggestions, weekly trends), if anything."""
+    from newsletter_agent.demo import run_demo_async
+
+    model = OfflineModel()
+    with tempfile.TemporaryDirectory() as scratch:
+        output = Path(scratch) / "site"
+        output.mkdir()
+        report, _ = asyncio.run(run_demo_async(output, lambda: model, True, NOW))
+    advice = report.get("cleanup_advice") or {}
+    groups = report["publications_observed"] + report["publications_provisional"]
+    return {
+        "cleanup_suggestions": [
+            {key: item[key] for key in ("name", "action", "received", "unread", "unread_share", "reason")}
+            for item in advice.get("suggestions", [])
+        ],
+        "weekly": [{"name": g["name"], "weekly_counts": g.get("weekly_counts", []), "trend": g.get("trend")}
+                   for g in groups if g.get("weekly_counts")],
+    }
+
+
 def run_command(command: list[str], cwd: Path, stdout_only: bool = False) -> tuple[int, str]:
     result = subprocess.run(command, cwd=cwd, capture_output=True, text=True, check=False)
     return result.returncode, result.stdout if stdout_only else result.stdout + result.stderr
@@ -330,6 +352,7 @@ def main(argv=None) -> int:
     results["disk_scaling"] = bench_disk_scaling((300, 600) if args.quick else (1000, 5000, 20000))
     step("demo answers")
     results["answers"] = demo_answers()
+    results["features"] = demo_features()
     if not args.skip_code_health:
         step("code health")
         results["code_health"] = code_health(tree)
