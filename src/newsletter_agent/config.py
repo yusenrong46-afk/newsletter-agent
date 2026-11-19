@@ -103,7 +103,10 @@ def load_config() -> dict:
     if path.exists():
         saved = tomllib.loads(path.read_text(encoding="utf-8"))
         config["display_timezone"] = saved.get("display_timezone", config["display_timezone"])
-        config["retention_days"] = int(saved.get("retention_days", config["retention_days"]))
+        retention = saved.get("retention_days", config["retention_days"])
+        if isinstance(retention, bool) or not isinstance(retention, int) or retention < 1:
+            raise ValueError(f"retention_days in {path} must be a whole number of days, at least 1.")
+        config["retention_days"] = retention
         config["briefing"].update(saved.get("briefing", {}))
     return config
 

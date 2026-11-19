@@ -35,6 +35,10 @@ Everything is in `~/.newsletter-agent/`, or the folder set by `NEWSLETTER_AGENT_
 | `inventory/reports/` | JSON, Markdown, and HTML reports |
 | `briefings/` | Briefing pages: summaries, plus the subjects of their sources |
 | `logs/` | Output from scheduled briefings (counts, no email content) |
+| `evals/` | Results of `newsletter-agent eval`: scores on the bundled invented emails only, never your mail |
+| `briefing.cmd` (Windows only) | The small script Task Scheduler runs for the daily briefing |
+
+The daily schedule itself is one small file outside this folder: a LaunchAgent in `~/Library/LaunchAgents/` on macOS, or a service and timer in `~/.config/systemd/user/` on Linux. `newsletter-agent unschedule` removes it.
 
 **Email bodies are never written to disk.** They exist in memory only while a batch is being processed.
 

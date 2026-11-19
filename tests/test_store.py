@@ -21,6 +21,7 @@ import pytest
 
 from helpers import DAY_MS, NOW_MS, FakeOpenAI, fake_gmail, many_newsletters, newsletter, run_workflow
 from newsletter_agent import config
+from newsletter_agent import store as store_module
 from newsletter_agent.demo import make_message
 from newsletter_agent.store import DATABASE_NAME, InventoryStore, database_rows
 
@@ -186,6 +187,61 @@ def test_a_symlinked_database_is_refused(tmp_path):
         InventoryStore(directory)
 
 
+# --- A busy database is not a broken database ---------------------------------------------
+
+def no_database_was_moved_aside(directory: Path) -> bool:
+    return not list(directory.glob(f"{DATABASE_NAME}.corrupt-*"))
+
+
+def test_a_second_run_never_moves_a_database_that_is_mid_write(tmp_path, monkeypatch, capsys):
+    """A scan holds a write open for a whole page; another run starting then must leave the file alone."""
+    monkeypatch.setattr(store_module, "BUSY_TIMEOUT_SECONDS", 0.2)
+    directory = tmp_path / "inventory"
+    first = InventoryStore(directory)
+    first.lock()
+    first.metadata["a"] = {"id": "a", "internal_date": NOW_MS}  # Written, not yet committed.
+
+    second = InventoryStore(directory)  # Opens without waiting: an up-to-date database is only read.
+    with pytest.raises(ValueError, match="Another newsletter-agent run"):
+        second.lock()
+    second.close()
+    assert no_database_was_moved_aside(directory)
+    assert "unreadable" not in capsys.readouterr().err
+
+    first.save_metadata()
+    first.close()
+    assert "a" in InventoryStore(directory).metadata  # The first run's work is intact.
+
+
+def test_a_database_locked_during_setup_reports_in_use(tmp_path, monkeypatch):
+    monkeypatch.setattr(store_module, "BUSY_TIMEOUT_SECONDS", 0.2)
+    directory = tmp_path / "inventory"
+    directory.mkdir()
+    holder = sqlite3.connect(directory / DATABASE_NAME)
+    holder.execute("PRAGMA journal_mode = WAL")
+    holder.execute("BEGIN IMMEDIATE")  # Another process is creating the tables right now.
+    try:
+        with pytest.raises(ValueError, match="Another newsletter-agent run"):
+            InventoryStore(directory)
+    finally:
+        holder.close()
+    assert no_database_was_moved_aside(directory)
+
+
+def test_only_real_damage_moves_the_database_aside(tmp_path, monkeypatch):
+    """Disk-full or permission errors must be reported as they are, never treated as corruption."""
+    directory = tmp_path / "inventory"
+    InventoryStore(directory).close()
+
+    def failing_connect(*args, **kwargs):
+        raise sqlite3.OperationalError("database or disk is full")
+
+    monkeypatch.setattr(store_module.sqlite3, "connect", failing_connect)
+    with pytest.raises(ValueError, match="Could not open newsletter.db: database or disk is full"):
+        InventoryStore(directory)
+    assert no_database_was_moved_aside(directory)
+
+
 # --- Retention ----------------------------------------------------------------------
 
 def add_old_record(directory: Path, message_id: str, days_ago: int):
@@ -230,6 +286,14 @@ def test_a_saved_config_keeps_retention_days(tmp_path):
     settings["retention_days"] = 30
     config.save_config(settings)
     assert config.load_config()["retention_days"] == 30
+
+
+@pytest.mark.parametrize("value", ['"ninety"', "0", "-5", "true", "30.5"])
+def test_an_invalid_retention_days_is_refused_with_a_clear_message(value):
+    config.private_dir()
+    (config.app_home() / "config.toml").write_text(f"retention_days = {value}\n", encoding="utf-8")
+    with pytest.raises(ValueError, match="retention_days .* must be a whole number of days, at least 1"):
+        config.load_config()
 
 
 def test_cached_reruns_still_call_the_model_for_new_mail_only(tmp_path):

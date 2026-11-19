@@ -339,6 +339,17 @@ def test_resume_removes_messages_that_disappeared_and_adds_new_ones(tmp_path):
     assert any("no longer listed" in note for note in report["notes"])
 
 
+def test_a_gmail_tool_failure_keeps_its_readable_reason():
+    """`check --gmail` used to print "the Gmail MCP session failed (GmailToolError)" and hide the fix."""
+    from newsletter_agent.gmail_client import GmailToolError
+
+    error = GmailToolError.from_tool_text(
+        "Error executing tool search_emails: auth_expired: Gmail is not connected. Run: newsletter-agent login")
+    wrapped = ExceptionGroup("task group", [ExceptionGroup("inner", [error])])
+    assert describe_session_failure(wrapped) == "auth_expired: Gmail is not connected. Run: newsletter-agent login"
+    assert describe_session_failure(RuntimeError("secret detail")) == "the Gmail MCP session failed (RuntimeError)."
+
+
 def test_resume_with_different_days_is_refused(tmp_path):
     google = fake_gmail([newsletter("a")])
     run_workflow(tmp_path, google)

@@ -336,6 +336,13 @@ def run_eval_command(real_model: bool = False, dataset: str | None = None, outpu
                 f"hard limit {EVAL_MAX_MODEL_CALLS} calls / {EVAL_MAX_TOKENS:,} tokens.")
 
         result = run_eval(cases, make_openai_client, MODEL, approved=approved, confirm=confirm)
+        if result["status"] == "awaiting_approval":
+            # Nothing was sent, so there is nothing to score or save (and no earlier result to overwrite).
+            if sys.stdin.isatty():
+                print("Cancelled. Nothing was sent to OpenAI and no result was saved.")
+                return 0
+            print("Not interactive: re-run with --yes to approve sending the synthetic emails to OpenAI.")
+            return 2
     else:
         model = OfflineModel()
         result = run_eval(cases, lambda: model, "offline")

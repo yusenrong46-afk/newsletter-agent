@@ -155,6 +155,92 @@ def test_ctrl_c_with_reads_in_flight_saves_a_consistent_partial_report(tmp_path)
         assert resumed["counts"][key] == fresh["counts"][key]
 
 
+# A deleted message that was read in a parallel chunk, in a run that stopped before counting it,
+# must not be recorded as "unavailable": every unavailable ID has to be a discovered ID.
+
+def deleted_message_later_in_the_chunk():
+    google = SyntheticGmail(many_newsletters(10), page_size=100)
+    google.listed_but_deleted = ["gone"]  # Listed after the 10 real messages; Gmail answers 404.
+    return google
+
+
+def test_the_message_cap_does_not_record_a_deleted_message_it_never_counted(tmp_path):
+    report, _ = run_workflow(tmp_path, deleted_message_later_in_the_chunk(), max_messages=3)
+    assert (report["counts"]["discovered"], report["counts"]["unavailable"]) == (3, 0)
+    assert report["reconciliation"]["ok"]
+
+
+def test_a_failed_read_does_not_record_a_later_deleted_message(tmp_path):
+    google = deleted_message_later_in_the_chunk()
+    google.get_errors["m002"] = 500
+    report, _ = run_workflow(tmp_path, google)
+    assert report["run"]["status"] == "partial_failure"
+    assert (report["counts"]["discovered"], report["counts"]["unavailable"]) == (2, 0)
+    assert report["reconciliation"]["ok"]
+
+    del google.get_errors["m002"]
+    report, _ = run_workflow(tmp_path, google, resume=True)
+    assert (report["counts"]["discovered"], report["counts"]["unavailable"]) == (11, 1)
+    assert report["run"]["status"] == "complete" and report["reconciliation"]["ok"]
+
+
+def test_ctrl_c_after_a_deleted_message_was_read_reconciles(tmp_path):
+    class DeletedAnswersFirst(SyntheticGmail):
+        """The deleted message's 404 comes back at once; every other read takes half a second."""
+
+        def __init__(self, messages, pages):
+            super().__init__(messages, pages=pages)
+            self.started, self.answered = set(), set()
+
+        def get(self, userId, id, format, metadataHeaders=None):
+            request = super().get(userId, id, format, metadataHeaders)
+            inner = request.action
+
+            def action():
+                self.started.add(id)
+                try:
+                    if id != "gone":
+                        time.sleep(0.5)
+                    return inner()
+                finally:
+                    self.answered.add(id)
+
+            request.action = action
+            return request
+
+    corpus = many_newsletters(6)
+    google = DeletedAnswersFirst(corpus, pages=[["gone", *[message["id"] for message in corpus]]])
+    store = InventoryStore(tmp_path / "inventory")
+
+    async def go():
+        async with create_connected_server_and_client_session(build_mcp_server(lambda: google)) as session:
+            task = asyncio.create_task(run_inventory(
+                GmailMcpClient(session), InventoryOptions(preflight=True), store, now=NOW))
+            while not (len(google.started) == 7 and "gone" in google.answered):
+                await asyncio.sleep(0.005)
+            await asyncio.sleep(0.05)  # Let the 404 travel back to the client.
+            assert google.answered == {"gone"}  # The other six reads are still running.
+            task.cancel()
+            return await task
+
+    report = asyncio.run(go())
+    store.close()
+    assert report["run"]["status"] == "interrupted"
+    assert (report["counts"]["discovered"], report["counts"]["unavailable"]) == (0, 0)
+    assert report["reconciliation"]["ok"]
+
+
+def test_a_capped_resume_keeps_earlier_unavailable_messages_consistent(tmp_path):
+    google = SyntheticGmail(many_newsletters(20), page_size=100)
+    google.listed_but_deleted = ["gone"]
+    first, _ = run_workflow(tmp_path, google)
+    assert (first["counts"]["discovered"], first["counts"]["unavailable"]) == (21, 1)
+
+    resumed, _ = run_workflow(tmp_path, google, resume=True, max_messages=3)
+    assert (resumed["counts"]["discovered"], resumed["counts"]["unavailable"]) == (21, 1)
+    assert resumed["reconciliation"]["ok"]
+
+
 class JitterGmail(SlowGmail):
     """Random read times, so parallel reads finish in a different order every run."""
 

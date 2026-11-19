@@ -20,6 +20,8 @@ CATEGORY_LABELS = {
     "uncertain": "Uncertain",
 }
 
+ADVICE_LABELS = {"consider_unsubscribing": "Consider unsubscribing", "skim_or_reduce": "Skim or reduce"}
+
 STYLE = """
 :root {
   --bg: #f7f7f5; --surface: #ffffff; --text: #1d1d1b; --muted: #6b6b66; --border: #e3e2dd;
@@ -59,7 +61,8 @@ h1 { font-size: 26px; margin: 0 0 4px; } h2 { font-size: 18px; margin: 32px 0 12
 .table-wrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; }
 table { border-collapse: collapse; width: 100%; min-width: 640px; }
 th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
-th { font-size: 13px; color: var(--muted); font-weight: 600; cursor: pointer; user-select: none; white-space: nowrap; }
+th { font-size: 13px; color: var(--muted); font-weight: 600; user-select: none; white-space: nowrap; }
+th[data-sort] { cursor: pointer; }
 th.num, td.num { text-align: right; font-variant-numeric: tabular-nums; }
 tr:last-child td { border-bottom: none; }
 details summary { cursor: pointer; } details .detail { color: var(--muted); font-size: 13px; margin-top: 6px; }
@@ -210,9 +213,6 @@ def advice_section(advice: dict | None) -> str:
             f'<span class="reason">{escape(item["reason"])} {escape(header)}.</span></div>'
         )
     return f'<h2>Cleanup suggestions</h2>{intro}<div class="advice">{"".join(items)}</div>'
-
-
-ADVICE_LABELS = {"consider_unsubscribing": "Consider unsubscribing", "skim_or_reduce": "Skim or reduce"}
 
 
 def publication_row(group: dict) -> str:

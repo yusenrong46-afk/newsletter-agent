@@ -165,8 +165,8 @@ async def scan_mailbox(run: InventoryRun, gmail: GmailMcpClient):
                 if message_id not in fetched:
                     chunk = to_read[next_read:next_read + READ_CHUNK]
                     next_read += len(chunk)
-                    for chunk_id in chunk:
-                        state.unavailable.pop(chunk_id, None)
+                    # The parallel reads only fill the header cache. Run state changes below,
+                    # one ID at a time in listing order, so an early stop leaves nothing half-recorded.
                     records = await gather_in_order(
                         chunk, lambda chunk_id: fetch_metadata_or_error(run, gmail, chunk_id))
                     fetched.update(zip(chunk, records, strict=True))
@@ -176,6 +176,10 @@ async def scan_mailbox(run: InventoryRun, gmail: GmailMcpClient):
                     raise record
                 # Count an ID only after its read finished, so an interrupted or
                 # failed read can never leave a discovered ID with no outcome.
+                if record is None:
+                    state.unavailable[message_id] = "not_found"
+                else:
+                    state.unavailable.pop(message_id, None)
                 seen.append(message_id)
                 seen_set.add(message_id)
                 if record and exclusion_reason(record, state) is None:
@@ -220,6 +224,11 @@ async def fetch_metadata_or_error(run: InventoryRun, gmail: GmailMcpClient, mess
 
 
 async def fetch_metadata(run: InventoryRun, gmail: GmailMcpClient, message_id: str) -> dict | None:
+    """The header record from the cache or Gmail; None if Gmail no longer has the message.
+
+    This only touches the cache and counters. The caller records "unavailable" when it
+    counts the ID, because several of these run at once and the run may stop before then.
+    """
     cached = run.store.metadata.get(message_id)
     if cached:
         run.metadata_from_cache += 1
@@ -229,7 +238,6 @@ async def fetch_metadata(run: InventoryRun, gmail: GmailMcpClient, message_id: s
     except GmailToolError as error:
         if error.code != "not_found":
             raise
-        run.state.unavailable[message_id] = "not_found"
         return None
     record = make_message_record(raw)
     run.store.metadata[message_id] = record

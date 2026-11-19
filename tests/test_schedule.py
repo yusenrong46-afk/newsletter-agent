@@ -163,6 +163,14 @@ def test_windows_installs_a_daily_task_and_unschedule_deletes_it(home, monkeypat
     assert not schedule.is_scheduled() and not auto_approve()
 
 
+def test_the_windows_script_survives_percent_signs_and_non_ascii_paths(tmp_path, monkeypatch):
+    monkeypatch.setenv("NEWSLETTER_AGENT_HOME", str(tmp_path / "José 100% data"))
+    lines = schedule.build_windows_script().split("\r\n")
+    assert lines[:2] == ["@echo off", "chcp 65001 >nul"]  # UTF-8, so the accented folder name is read correctly.
+    assert "José 100%% data" in lines[2] and "100% data" not in lines[2].replace("%%", "")
+    assert "José 100%% data" in lines[3]
+
+
 @pytest.mark.parametrize("platform", ["darwin", "linux", "win32"])
 def test_unschedule_with_nothing_installed(home, monkeypatch, platform):
     on(monkeypatch, platform)

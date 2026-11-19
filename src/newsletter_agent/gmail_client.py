@@ -190,8 +190,10 @@ def describe_session_failure(error: BaseException) -> str:
     """MCP's task groups wrap errors in exception groups; find the original one."""
     while isinstance(error, BaseExceptionGroup):
         error = error.exceptions[0]
-    if isinstance(error, (ValueError, OSError)):
-        return str(error)  # These are this program's own readable messages.
+    if isinstance(error, (ValueError, OSError, GmailToolError)):
+        # This program's own readable messages. A GmailToolError carries only the server's
+        # short coded reason (for example "auth_expired: ... Run: newsletter-agent login").
+        return str(error)
     return f"the Gmail MCP session failed ({type(error).__name__})."
 
 

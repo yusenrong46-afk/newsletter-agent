@@ -177,10 +177,15 @@ def build_windows_script() -> str:
     """Task Scheduler runs one command, so a small script sets the data folder and the log."""
     python, *arguments = briefing_command()
     log = config.logs_dir() / "briefing.log"
+
+    def literal(path) -> str:
+        return str(path).replace("%", "%%")  # In a batch file, a single % starts a variable.
+
     return "\r\n".join([
         "@echo off",
-        f'set "NEWSLETTER_AGENT_HOME={config.app_home()}"',
-        f'"{python}" {" ".join(arguments)} >> "{log}" 2>&1',
+        "chcp 65001 >nul",  # The file is UTF-8, so paths with non-ASCII characters are read correctly.
+        f'set "NEWSLETTER_AGENT_HOME={literal(config.app_home())}"',
+        f'"{literal(python)}" {" ".join(arguments)} >> "{literal(log)}" 2>&1',
         "",
     ])
 

@@ -15,6 +15,7 @@ from email.utils import parseaddr
 from . import config
 from .classify import ALL_CATEGORIES, MODEL, SUBSCRIPTION_CATEGORIES, body_policy, classification_cache_key
 from .gmail_client import EXCERPT_CHARS, sender_address
+from .html_report import ADVICE_LABELS
 from .scan import InventoryRun, exclusion_reason, in_scope_records, is_unread, triage_messages, utc_iso
 
 
@@ -31,7 +32,6 @@ FADING_SILENCE_DAYS = 30
 ADVICE_MINIMUM_MESSAGES = 4
 UNSUBSCRIBE_UNREAD_SHARE = 0.8
 SKIM_UNREAD_SHARE = 0.5
-ADVICE_ACTIONS = {"consider_unsubscribing": "Consider unsubscribing", "skim_or_reduce": "Skim or reduce"}
 
 
 def week_count(window: tuple[int, int]) -> int:
@@ -268,7 +268,6 @@ def build_notes(run: InventoryRun, counts: dict, body_statuses: Counter) -> list
         notes.append("Gmail asked us to slow down, so the rest of this run read one message at a time.")
     if run.unread_ids is None:
         notes.append("Cleanup suggestions are off because unread flags could not be refreshed.")
-    if run.unread_ids is None:
         notes.append("Unread flags could not be refreshed; they reflect when each message's metadata was read.")
     return notes
 
@@ -477,7 +476,7 @@ def render_advice(advice: dict | None) -> list[str]:
         return [*lines, "None: no observed publication is mostly unread.", ""]
     for item in advice["suggestions"]:
         header = "has an unsubscribe header" if item["has_unsubscribe_header"] else "no unsubscribe header"
-        lines.append(f"- {ADVICE_ACTIONS[item['action']]}: {item['name']}. {item['reason']} ({header})")
+        lines.append(f"- {ADVICE_LABELS[item['action']]}: {item['name']}. {item['reason']} ({header})")
     return [*lines, ""]
 
 

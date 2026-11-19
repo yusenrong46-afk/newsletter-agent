@@ -32,6 +32,9 @@ LEGACY_JSON_FILES = ("metadata_cache.json", "classification_cache.json", "checkp
                      "briefing_checkpoint.json")
 # A checkpoint's listing query reaches one day past its window, so keep two days of margin.
 RETENTION_MARGIN_MS = 2 * 86_400_000
+BUSY_TIMEOUT_SECONDS = 30
+TABLES = ("metadata", "classifications", "kv")
+IN_USE = "Another newsletter-agent run is using this data. Try again when it finishes."
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS metadata (
@@ -95,10 +98,22 @@ class SqliteCache(MutableMapping[str, dict]):
 
 def _create_private_file(path: Path):
     """Create an empty owner-only file if it does not exist yet."""
+    refusal = f"Refusing to use a symlink for private data: {path}"
     if path.is_symlink():
-        raise ValueError(f"Refusing to use a symlink for private data: {path}")
-    os.close(os.open(path, os.O_WRONLY | os.O_CREAT, 0o600))
+        raise ValueError(refusal)
+    try:
+        # O_NOFOLLOW also refuses a symlink swapped in after the check above (where the OS supports it).
+        os.close(os.open(path, os.O_WRONLY | os.O_CREAT | getattr(os, "O_NOFOLLOW", 0), 0o600))
+    except OSError as error:
+        if path.is_symlink():
+            raise ValueError(refusal) from None
+        raise ValueError(f"Could not create {path.name}: {error.strerror or error}") from None
     os.chmod(path, 0o600)
+
+
+def sqlite_error_code(error: sqlite3.Error) -> int:
+    """The primary SQLite result code (extended codes carry extra detail in the higher bits)."""
+    return (getattr(error, "sqlite_errorcode", 0) or 0) & 0xFF
 
 
 class InventoryStore:
@@ -116,7 +131,11 @@ class InventoryStore:
         self._lock_file: TextIO | None = None
         self.database_path = self.directory / DATABASE_NAME
         self._connection = self._open_database()
-        self._migrate_legacy_json()
+        try:
+            self._migrate_legacy_json()
+        except BaseException:
+            self._connection.close()
+            raise
         self.metadata = SqliteCache(self._connection, "metadata", "id", "record", "internal_date",
                                     lambda key, record: int(record.get("internal_date", 0)))
         self.classifications = SqliteCache(self._connection, "classifications", "key", "result", "message_id",
@@ -125,9 +144,20 @@ class InventoryStore:
     # --- Opening, corruption, and migration -----------------------------------------
 
     def _open_database(self) -> sqlite3.Connection:
+        """Open the database. Only a file SQLite itself calls damaged is moved aside.
+
+        "Busy" means another run holds the database mid-write: that file is healthy and in
+        use, so it is left alone. Any other failure (disk full, no permission) is reported
+        as it is; moving the caches aside would not help and would lose them.
+        """
         try:
             return self._connect()
-        except sqlite3.DatabaseError:
+        except sqlite3.DatabaseError as error:
+            code = sqlite_error_code(error)
+            if code in (sqlite3.SQLITE_BUSY, sqlite3.SQLITE_LOCKED):
+                raise ValueError(IN_USE) from None
+            if code not in (sqlite3.SQLITE_NOTADB, sqlite3.SQLITE_CORRUPT):
+                raise ValueError(f"Could not open {DATABASE_NAME}: {error}") from None
             stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
             aside = self.database_path.with_name(f"{DATABASE_NAME}.corrupt-{stamp}")
             for suffix in ("", "-wal", "-shm"):
@@ -140,13 +170,19 @@ class InventoryStore:
 
     def _connect(self) -> sqlite3.Connection:
         _create_private_file(self.database_path)
-        connection = sqlite3.connect(self.database_path, timeout=30)
+        connection = sqlite3.connect(self.database_path, timeout=BUSY_TIMEOUT_SECONDS)
         try:
-            connection.execute("PRAGMA journal_mode = WAL")
+            # Everything here only reads when the database is already set up, so opening it
+            # never waits on (or disturbs) a run that is in the middle of writing a page.
+            if connection.execute("PRAGMA journal_mode").fetchone()[0].lower() != "wal":
+                connection.execute("PRAGMA journal_mode = WAL")
             connection.execute("PRAGMA synchronous = FULL")
-            connection.executescript(SCHEMA)
-            connection.execute(f"PRAGMA user_version = {SCHEMA_VERSION}")
-            connection.commit()
+            tables = {row[0] for row in connection.execute("SELECT name FROM sqlite_master WHERE type = 'table'")}
+            version = connection.execute("PRAGMA user_version").fetchone()[0]
+            if version != SCHEMA_VERSION or not set(TABLES) <= tables:
+                connection.executescript(SCHEMA)
+                connection.execute(f"PRAGMA user_version = {SCHEMA_VERSION}")
+                connection.commit()
         except sqlite3.DatabaseError:
             connection.close()
             raise
@@ -157,8 +193,7 @@ class InventoryStore:
         return connection
 
     def _is_empty(self) -> bool:
-        return not any(self._connection.execute(f"SELECT 1 FROM {table} LIMIT 1").fetchone()
-                       for table in ("metadata", "classifications", "kv"))
+        return not any(self._connection.execute(f"SELECT 1 FROM {table} LIMIT 1").fetchone() for table in TABLES)
 
     def _migrate_legacy_json(self):
         """Import v0.1 JSON caches once, so an upgrade never re-reads Gmail or re-bills the model."""
@@ -207,7 +242,7 @@ class InventoryStore:
         lock_file = open(self.directory / ".lock", "w")  # noqa: SIM115
         if not try_lock(lock_file):
             lock_file.close()
-            raise ValueError("Another newsletter-agent run is using this data. Try again when it finishes.")
+            raise ValueError(IN_USE)
         self._lock_file = lock_file
 
     def unlock(self):
@@ -309,7 +344,6 @@ def database_rows(directory: Path) -> dict[str, Any]:
     """Row counts per table, for `newsletter-agent setup` and tests."""
     connection = sqlite3.connect(directory / DATABASE_NAME)
     try:
-        return {table: connection.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
-                for table in ("metadata", "classifications", "kv")}
+        return {table: connection.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0] for table in TABLES}
     finally:
         connection.close()

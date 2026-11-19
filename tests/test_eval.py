@@ -146,3 +146,19 @@ def test_refusals_and_incomplete_answers_count_as_unresolved():
     result = run_eval(CASES, lambda: FakeOpenAI(refuse), "test")
     assert result["unresolved_rate"] == 1.0
     assert result["subscription_detection"]["true_positive"] == 0
+
+
+def test_a_declined_real_model_eval_saves_nothing_and_keeps_earlier_results(tmp_path, monkeypatch, capsys):
+    from newsletter_agent import classify
+
+    def no_client():
+        raise AssertionError("A declined eval must not create an OpenAI client.")
+
+    monkeypatch.setattr(classify, "make_openai_client", no_client)
+    monkeypatch.setattr("sys.stdin.isatty", lambda: False, raising=False)
+    earlier = tmp_path / "gpt-6-luna-earlier.json"
+    earlier.write_text("{}", encoding="utf-8")
+
+    assert run_eval_command(real_model=True, output=str(tmp_path)) == 2  # Not approved, not interactive.
+    assert "--yes" in capsys.readouterr().out
+    assert [path.name for path in tmp_path.iterdir()] == ["gpt-6-luna-earlier.json"]  # No zero-score "result".
