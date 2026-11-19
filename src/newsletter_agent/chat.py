@@ -86,6 +86,10 @@ def get_inventory_overview(report: dict | None) -> dict:
         "subscription_messages": counts["subscription_messages"],
         "subscription_unread": counts["subscription_unread"],
         "categories": {name: report["category_breakdown"].get(name, 0) for name in ALL_CATEGORIES},
+        "cleanup_suggestions": [
+            {"name": item["name"], "suggestion": item["action"], "reason": item["reason"]}
+            for item in (report.get("cleanup_advice") or {}).get("suggestions", [])[:5]
+        ],
     }
 
 

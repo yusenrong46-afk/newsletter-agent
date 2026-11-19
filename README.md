@@ -14,7 +14,8 @@ It runs on your own computer, reads Gmail read-only through a local [MCP](https:
 
 ## What it does
 
-- **Inventory:** scans 90 days of mail, including archived mail, and reports each newsletter or subscription with how much it sends and how much sits unread.
+- **Inventory:** scans 90 days of mail, including archived mail, and reports each newsletter or subscription with how much it sends, how much sits unread, and a weekly trend.
+- **Cleanup suggestions:** points out newsletters you mostly don't open ("15 received, 14 still unread"). It only suggests; it never unsubscribes or changes anything.
 - **Briefing:** each morning, summarizes only *new* editorial newsletters. Every bullet cites the email it came from.
 - **Chat:** answers questions like "what do I get most?" or "summarize Byte Garden from this week."
 - **Safety:** before anything costs money, it shows a free preflight with the scope and a token estimate, asks for approval, and enforces a hard budget.

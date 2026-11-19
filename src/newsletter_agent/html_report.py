@@ -67,6 +67,13 @@ ul.notes li { margin: 4px 0; }
 .section { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px; margin: 12px 0; }
 .section h3 { margin: 0 0 8px; font-size: 16px; }
 .source { color: var(--muted); font-size: 13px; }
+.advice { display: grid; gap: 8px; }
+.advice-item { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px;
+  display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; align-items: baseline; }
+.advice-item .reason { grid-column: 1 / -1; color: var(--muted); font-size: 13px; }
+.spark { display: block; }
+.spark polyline { fill: none; stroke: var(--accent); stroke-width: 1.5; }
+.spark circle { fill: var(--accent); }
 """  # noqa: E501
 
 SCRIPT = """
@@ -160,6 +167,54 @@ def category_bars(categories: dict, classified: int) -> str:
     )
 
 
+TREND_BADGES = {"new": "info", "rising": "good", "steady": "info", "falling": "warn", "fading": "warn"}
+
+
+def sparkline(counts: list[int]) -> str:
+    """Weekly counts as a tiny inline SVG. Numbers only, so nothing from an email reaches the markup."""
+    if not counts:
+        return ""
+    width, height, top = 84, 20, max(max(counts), 1)
+    step = width / max(len(counts) - 1, 1)
+    points = [(round(i * step, 1), round(height - 2 - (height - 4) * count / top, 1)) for i, count in enumerate(counts)]
+    label = "Messages per week: " + ", ".join(str(count) for count in counts)
+    last_x, last_y = points[-1]
+    return (f'<svg class="spark" width="{width}" height="{height}" viewBox="0 0 {width} {height}" role="img" '
+            f'aria-label="{label}"><title>{label}</title>'
+            f'<polyline points="{" ".join(f"{x},{y}" for x, y in points)}"/>'
+            f'<circle cx="{last_x}" cy="{last_y}" r="2"/></svg>')
+
+
+def trend_badge(trend: str | None) -> str:
+    if not trend:
+        return ""
+    return f'<span class="badge {TREND_BADGES.get(trend, "info")}">{escape(trend)}</span>'
+
+
+def advice_section(advice: dict | None) -> str:
+    if not advice:
+        return ""
+    intro = ('<p class="muted small">Based only on how much each newsletter sends and how much of it stays unread. '
+             "Nothing was changed in Gmail; unsubscribe from the email itself if you agree.</p>")
+    if not advice["available"]:
+        return f"<h2>Cleanup suggestions</h2><p>{escape(advice['reason'])}</p>"
+    if not advice["suggestions"]:
+        return f"<h2>Cleanup suggestions</h2>{intro}<p>None: no observed publication is mostly unread.</p>"
+    items = []
+    for item in advice["suggestions"]:
+        badge = "warn" if item["action"] == "consider_unsubscribing" else "info"
+        header = "Has an unsubscribe header" if item["has_unsubscribe_header"] else "No unsubscribe header"
+        items.append(
+            f'<div class="advice-item"><strong>{escape(item["name"])}</strong>'
+            f'<span class="badge {badge}">{escape(ADVICE_LABELS[item["action"]])}</span>'
+            f'<span class="reason">{escape(item["reason"])} {escape(header)}.</span></div>'
+        )
+    return f'<h2>Cleanup suggestions</h2>{intro}<div class="advice">{"".join(items)}</div>'
+
+
+ADVICE_LABELS = {"consider_unsubscribing": "Consider unsubscribing", "skim_or_reduce": "Skim or reduce"}
+
+
 def publication_row(group: dict) -> str:
     example = group["example"]
     other = ", ".join(
@@ -189,6 +244,7 @@ def publication_row(group: dict) -> str:
         f'<div class="detail">{"<br>".join(details)}</div></details></td>'
         f'<td>{escape(CATEGORY_LABELS.get(group["category"], group["category"] or ""))}</td>'
         f'<td class="num">{group["received_count"]}</td><td class="num">{group["unread_count"]}</td>'
+        f'<td>{sparkline(group.get("weekly_counts", []))}</td><td>{trend_badge(group.get("trend"))}</td>'
         f'<td>{escape(group["confidence"] or "")}</td>'
         f'<td><span class="badge {status_class}">{escape(group["status"])}</span></td></tr>'
     )
@@ -216,6 +272,8 @@ def render_html_report(report: dict, demo: bool = False) -> str:
   {card(counts['in_scope'], 'messages scanned')}
 </div>
 
+{advice_section(report.get('cleanup_advice'))}
+
 <h2>Categories</h2>
 {category_bars(report['category_breakdown'], counts['classified'])}
 
@@ -230,7 +288,7 @@ def render_html_report(report: dict, demo: bool = False) -> str:
 <div class="table-wrap"><table id="publications">
 <thead><tr><th data-sort="name">Publication</th><th data-sort="category">Category</th>
 <th class="num" data-sort="received">Received</th><th class="num" data-sort="unread">Unread</th>
-<th data-sort="confidence">Confidence</th><th data-sort="status">Status</th></tr></thead>
+<th>Per week</th><th>Trend</th><th data-sort="confidence">Confidence</th><th data-sort="status">Status</th></tr></thead>
 <tbody>{"".join(publication_row(group) for group in groups)}</tbody>
 </table></div>
 <p class="muted small">Click a column to sort and a name for details. Observed groups have a List-ID or repeated unsubscribe evidence; provisional groups have weaker evidence.</p>

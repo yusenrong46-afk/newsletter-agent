@@ -1,9 +1,11 @@
-"""Grouping, counting, and the text report.
+"""Grouping, counting, trends, cleanup suggestions, and the text report.
 
 Every number here is calculated by Python from stored records. The model
-supplies labels and names only.
+supplies labels and names only. Trends and cleanup suggestions are plain
+arithmetic on dates and unread flags; they make no model calls.
 """
 
+import math
 import re
 from collections import Counter, defaultdict
 from dataclasses import dataclass
@@ -21,6 +23,82 @@ def display_time(milliseconds: int, zone=None) -> str:
     return moment.strftime("%Y-%m-%d %H:%M %Z")
 
 
+DAY_MS = 86_400_000
+WEEK_MS = 7 * DAY_MS
+TREND_MINIMUM_WINDOW_DAYS = 28  # Shorter windows (such as a briefing's) are too short for a trend.
+NEW_SENDER_DAYS = 14
+FADING_SILENCE_DAYS = 30
+ADVICE_MINIMUM_MESSAGES = 4
+UNSUBSCRIBE_UNREAD_SHARE = 0.8
+SKIM_UNREAD_SHARE = 0.5
+ADVICE_ACTIONS = {"consider_unsubscribing": "Consider unsubscribing", "skim_or_reduce": "Skim or reduce"}
+
+
+def week_count(window: tuple[int, int]) -> int:
+    return max(1, math.ceil((window[1] - window[0]) / WEEK_MS))
+
+
+def weekly_counts(dates_ms: list[int], window: tuple[int, int]) -> list[int]:
+    """Messages per week from the window start; the last week may be partial."""
+    bins = [0] * week_count(window)
+    for moment in dates_ms:
+        bins[min(max((moment - window[0]) // WEEK_MS, 0), len(bins) - 1)] += 1
+    return bins
+
+
+def trend(dates_ms: list[int], window: tuple[int, int]) -> str | None:
+    """new, fading, rising, falling or steady; None when the window is too short to say."""
+    start, end = window
+    if not dates_ms or end - start < TREND_MINIMUM_WINDOW_DAYS * DAY_MS:
+        return None
+    if min(dates_ms) >= end - NEW_SENDER_DAYS * DAY_MS:
+        return "new"
+    if max(dates_ms) < end - FADING_SILENCE_DAYS * DAY_MS and len(dates_ms) >= 3:
+        return "fading"
+    middle = start + (end - start) // 2
+    first = sum(1 for moment in dates_ms if moment < middle)
+    second = len(dates_ms) - first
+    if second - first >= 2 and second >= 1.5 * first:
+        return "rising"
+    if first - second >= 2 and first >= 1.5 * second:
+        return "falling"
+    return "steady"
+
+
+def cleanup_advice(groups: list[dict], unread_flags_fresh: bool) -> dict:
+    """Suggest newsletters to drop or skim, from unread share and volume. Read-only: nothing is changed.
+
+    Only observed publications with at least ADVICE_MINIMUM_MESSAGES messages qualify, so a
+    one-off email, a provisional sender, or mail that is not a subscription is never suggested.
+    """
+    if not unread_flags_fresh:
+        return {"available": False, "suggestions": [],
+                "reason": "Unread flags could not be refreshed, so cleanup suggestions are off for this report."}
+    suggestions = []
+    for group in groups:
+        received, unread = group["received_count"], group["unread_count"]
+        if group["status"] != "observed" or group["category"] not in SUBSCRIPTION_CATEGORIES:
+            continue
+        if received < ADVICE_MINIMUM_MESSAGES:
+            continue
+        share = unread / received
+        if share >= UNSUBSCRIBE_UNREAD_SHARE:
+            action = "consider_unsubscribing"
+        elif share >= SKIM_UNREAD_SHARE:
+            action = "skim_or_reduce"
+        else:
+            continue
+        suggestions.append({
+            "group_key": group["group_key"], "name": group["name"], "category": group["category"],
+            "action": action, "received": received, "unread": unread, "unread_share": round(share, 3),
+            "has_unsubscribe_header": group["has_unsubscribe_header"],
+            "reason": f"{received} received, {unread} still unread ({round(100 * share)}%).",
+        })
+    suggestions.sort(key=lambda item: (item["action"] != "consider_unsubscribing", -item["unread"],
+                                       item["name"].casefold(), item["group_key"]))
+    return {"available": True, "suggestions": suggestions, "reason": None}
+
+
 def group_key(record: dict) -> str:
     """Group by List-ID, otherwise by exact sender address. Never by domain."""
     return f"list:{record['list_id']}" if record["list_id"] else f"sender:{sender_address(record)}"
@@ -32,7 +110,8 @@ def most_common(values) -> str | None:
     return min(counts, key=lambda value: (-counts[value], value)) if counts else None
 
 
-def build_group(key: str, messages: list[dict], other_messages: list[dict], zone) -> dict:
+def build_group(key: str, messages: list[dict], other_messages: list[dict], zone,
+                window: tuple[int, int] | None = None) -> dict:
     """Summarize one publication group using exact counts from stored records."""
     newest = max(messages, key=lambda message: message["record"]["internal_date"])
     names = Counter(m["result"]["publication_name"] for m in messages if m["result"]["publication_name"])
@@ -42,6 +121,7 @@ def build_group(key: str, messages: list[dict], other_messages: list[dict], zone
         1 for m in messages if m["record"]["has_list_unsubscribe"] and m["result"]["confidence"] != "low"
     )
     observed = is_list_group or strong_messages >= 2
+    dates = [m["record"]["internal_date"] for m in messages]
     return {
         "group_key": key,
         "name": most_common(names.elements()) or fallback_name,
@@ -62,6 +142,9 @@ def build_group(key: str, messages: list[dict], other_messages: list[dict], zone
         if is_list_group
         else "exact sender address, no List-ID",
         "other_messages_same_identity": dict(Counter(m["result"]["classification"] for m in other_messages)),
+        "has_unsubscribe_header": any(m["record"]["has_list_unsubscribe"] for m in messages),
+        "weekly_counts": weekly_counts(dates, window) if window else [],
+        "trend": trend(dates, window) if window else None,
         "example": {
             "subject": newest["record"]["subject"],
             "message_id": newest["record"]["id"],
@@ -70,7 +153,7 @@ def build_group(key: str, messages: list[dict], other_messages: list[dict], zone
     }
 
 
-def build_groups(classified: list[dict], zone=None) -> list[dict]:
+def build_groups(classified: list[dict], zone=None, window: tuple[int, int] | None = None) -> list[dict]:
     """Only subscription categories form publications; other mail stays visible beside them."""
     subscription, other = defaultdict(list), defaultdict(list)
     for message in classified:
@@ -79,7 +162,7 @@ def build_groups(classified: list[dict], zone=None) -> list[dict]:
             subscription[key].append(message)
         else:
             other[key].append(message)
-    groups = [build_group(key, messages, other.get(key, []), zone) for key, messages in subscription.items()]
+    groups = [build_group(key, messages, other.get(key, []), zone, window) for key, messages in subscription.items()]
     return sorted(groups, key=lambda group: (-group["received_count"], group["name"].lower(), group["group_key"]))
 
 
@@ -109,6 +192,9 @@ def check_reconciliation(counts: dict, categories: dict, groups: list[dict]) -> 
     subscription_total = sum(categories[name] for name in SUBSCRIPTION_CATEGORIES)
     if sum(group["received_count"] for group in groups) != subscription_total:
         problems.append("sum of group counts != subscription messages")
+    for group in groups:
+        if group.get("weekly_counts") and sum(group["weekly_counts"]) != group["received_count"]:
+            problems.append(f"weekly counts != received for {group['group_key']}")
     return problems
 
 
@@ -181,6 +267,8 @@ def build_notes(run: InventoryRun, counts: dict, body_statuses: Counter) -> list
     if run.slow_mode:
         notes.append("Gmail asked us to slow down, so the rest of this run read one message at a time.")
     if run.unread_ids is None:
+        notes.append("Cleanup suggestions are off because unread flags could not be refreshed.")
+    if run.unread_ids is None:
         notes.append("Unread flags could not be refreshed; they reflect when each message's metadata was read.")
     return notes
 
@@ -239,7 +327,8 @@ def build_report(run: InventoryRun) -> dict:
 
     categories = {name: 0 for name in ALL_CATEGORIES}
     categories.update(Counter(m["result"]["classification"] for m in classified))
-    groups = build_groups(classified, zone)
+    window = (state.window_start_ms, state.window_end_ms)
+    groups = build_groups(classified, zone, window)
     observed = [group for group in groups if group["status"] == "observed"]
     provisional = [group for group in groups if group["status"] == "provisional"]
     body_statuses = Counter(m["result"]["body_status"] for m in classified)
@@ -281,6 +370,8 @@ def build_report(run: InventoryRun) -> dict:
             "window_start_ms": state.window_start_ms,
             "window_end_ms": state.window_end_ms,
             "days": state.days,
+            "weeks": week_count(window),
+            "last_week_days": round(((window[1] - window[0]) - (week_count(window) - 1) * WEEK_MS) / DAY_MS, 1),
             "exclusions": "Spam, trash, drafts, sent mail, and chats. Archived mail is included.",
             "queries": [state.query, f"{state.query} is:unread"],
             "model": MODEL,
@@ -298,6 +389,7 @@ def build_report(run: InventoryRun) -> dict:
         "publications_observed": observed,
         "publications_provisional": provisional,
         "possible_duplicates": find_possible_duplicates(groups),
+        "cleanup_advice": cleanup_advice(groups, unread_flags_fresh=run.unread_ids is not None),
         "unresolved": outcomes.unresolved,
         "unavailable": [{"message_id": key, "reason": value} for key, value in sorted(state.unavailable.items())],
         "not_candidate_senders": [
@@ -362,6 +454,9 @@ def render_group(group: dict) -> list[str]:
         f'    Example: "{group["example"]["subject"]}" '
         f"({group['example']['received']}, message {group['example']['message_id']})",
     ]
+    if group.get("weekly_counts"):
+        trend_text = f" ({group['trend']})" if group.get("trend") else ""
+        lines.append(f"    Weekly: {' '.join(str(count) for count in group['weekly_counts'])}{trend_text}")
     if group["provisional_reason"]:
         lines.append(f"    Provisional because: {group['provisional_reason']}")
     if group["other_messages_same_identity"]:
@@ -370,6 +465,20 @@ def render_group(group: dict) -> list[str]:
     if len(group["name_variants"]) > 1:
         lines.append(f"    Name variants from the model: {', '.join(group['name_variants'])}")
     return lines
+
+
+def render_advice(advice: dict | None) -> list[str]:
+    if not advice:
+        return []
+    lines = ["## Cleanup suggestions (read-only: nothing was changed)"]
+    if not advice["available"]:
+        return [*lines, advice["reason"], ""]
+    if not advice["suggestions"]:
+        return [*lines, "None: no observed publication is mostly unread.", ""]
+    for item in advice["suggestions"]:
+        header = "has an unsubscribe header" if item["has_unsubscribe_header"] else "no unsubscribe header"
+        lines.append(f"- {ADVICE_ACTIONS[item['action']]}: {item['name']}. {item['reason']} ({header})")
+    return [*lines, ""]
 
 
 def render_report(report: dict) -> str:
@@ -389,6 +498,7 @@ def render_report(report: dict) -> str:
         f"Publications: {counts['publications_observed']} observed + {counts['publications_provisional']} provisional",
         f"Subscription messages: {counts['subscription_messages']} ({counts['subscription_unread']} unread)",
         "",
+        *render_advice(report.get("cleanup_advice")),
         "## Coverage (exact counts)",
         f"Unique IDs discovered: {counts['discovered']} "
         f"(in scope {counts['in_scope']}, excluded {counts['excluded']}, unavailable {counts['unavailable']})",

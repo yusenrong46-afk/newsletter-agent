@@ -40,6 +40,13 @@
    - the groups add up to the subscription messages
 9. **Report** as JSON, Markdown, and static HTML.
 
+### Trends and cleanup suggestions
+
+Both are plain Python on dates and unread flags, with no model calls.
+- **Weekly counts:** each publication's messages per week from the window start (90 days is 12 weeks plus a 6-day last week). Reconciliation checks that every publication's weekly counts add up to its total.
+- **Trend:** `new` (first seen in the last 14 days), `fading` (nothing in the last 30 days, at least 3 before), `rising` or `falling` (comparing the two halves of the window), otherwise `steady`. Windows shorter than 28 days, such as a briefing's, get no trend.
+- **Cleanup suggestions:** only observed publications with at least 4 messages. 80% or more unread suggests "consider unsubscribing"; 50 to 79% suggests "skim or reduce". Suggestions are ranked by unread count, then name, so the order is stable. If unread flags could not be refreshed, suggestions are turned off and the report says why. Reasons are built from numbers only, and no unsubscribe link is stored or shown.
+
 ### Grouping rules
 
 - **Group key:** the List-ID if present, otherwise the exact sender address. Never the domain or delivery service.
