@@ -220,6 +220,19 @@ def test_a_budget_stop_during_summaries_still_fails_and_spends_nothing_more(tmp_
     assert calls_of(fake, FactCheckBatch) == [] and calls_of(fake, EditorPlan) == []
 
 
+def test_a_failed_request_is_charged_so_the_next_role_cannot_exceed_the_cap(tmp_path):
+    def fail(issues):
+        raise openai.APIConnectionError(request=httpx.Request("POST", "https://example.invalid"))
+
+    # 3 calls: classification, summary, and exactly one more. The fact-check attempt uses it, even though it failed.
+    fake = FakeOpenAI(fact_check_handler=fail)
+    result, _ = brief(tmp_path, fake_gmail(two_newsletters_one_story()), fake, max_model_calls=3)
+    assert len(fake.calls) == 3 and calls_of(fake, EditorPlan) == []
+    assert result["usage"]["fact_check"]["model_calls"] == 1
+    assert any("Top stories could not be chosen (the budget for this briefing was reached)" in note
+               for note in result["notes"])
+
+
 @pytest.mark.parametrize("switch, skipped", [("fact_check", FactCheckBatch), ("top_stories", EditorPlan)])
 def test_each_role_can_be_switched_off(tmp_path, switch, skipped):
     result, fake = brief(tmp_path, fake_gmail(two_newsletters_one_story()), **{switch: False})

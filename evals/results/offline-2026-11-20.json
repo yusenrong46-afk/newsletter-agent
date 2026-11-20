@@ -1,7 +1,7 @@
 {
  "label": "offline",
  "model": "offline stand-in (keyword rules)",
- "generated_at": "2026-11-20T13:40:58+00:00",
+ "generated_at": "2026-11-20T14:37:00+00:00",
  "dataset": {
   "cases": 96,
   "by_label": {

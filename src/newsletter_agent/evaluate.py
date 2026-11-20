@@ -336,6 +336,24 @@ async def run_team_cases(cases: dict, model: ModelClient, max_model_calls: int, 
     }
 
 
+def attach_team(result: dict, team: dict) -> dict:
+    """Add the team's scores to a result. An unfinished role makes the whole eval incomplete.
+
+    A role that was refused, cut off, failed or hit its budget leaves bullets unchecked or
+    stories unchosen, so its numbers are not a measurement of the model and must not look like one.
+    """
+    result["briefing_team"] = team
+    unfinished = [f"{name} ({team[role]['status']})"
+                  for role, name in (("fact_check", "fact-checker"), ("editor", "editor"))
+                  if team[role]["status"] != "done"]
+    if unfinished:
+        reason = (f"The briefing-team eval did not finish: {', '.join(unfinished)}; "
+                  "its scores are not a full measurement.")
+        result["incomplete_reason"] = " ".join(filter(None, [result.get("incomplete_reason"), reason]))
+        result["complete"] = False
+    return result
+
+
 def run_team_eval(model_factory: Callable[[], ModelClient], max_model_calls: int = TEAM_MAX_MODEL_CALLS,
                   max_tokens: int = TEAM_MAX_TOKENS) -> dict:
     return asyncio.run(run_team_cases(load_team_cases(), model_factory(), max_model_calls, max_tokens))
@@ -401,6 +419,8 @@ def render_team_html(team: dict | None) -> str:
         return ""
     check, editor = team["fact_check"], team["editor"]
     headlines = "".join(f"<li>{escape(headline)}</li>" for headline in editor["headlines"]) or "<li>None.</li>"
+    unfinished = ("" if check["status"] == editor["status"] == "done" else
+                  " <strong>A role did not finish, so these scores are not a full measurement.</strong>")
     return f"""
 <h2>Briefing team</h2>
 <div class="cards">
@@ -412,7 +432,8 @@ def render_team_html(team: dict | None) -> str:
 </div>
 <p class="muted small">The fact-checker is given {check['bullets']} bullets, {check['planted_errors']} with a planted
 error. The editor is given {editor['bullets']} bullets in which {editor['shared_stories']} stories are covered by
-more than one newsletter; grouping is scored over pairs of bullets.</p>
+more than one newsletter; grouping is scored over pairs of bullets.
+Fact-checker run: {escape(check['status'])}. Editor run: {escape(editor['status'])}.{unfinished}</p>
 <h2>Top stories the editor chose</h2>
 <ul class="notes">{headlines}</ul>
 """
@@ -431,19 +452,21 @@ def summary_lines(result: dict) -> list[str]:
         f"Ship bar (subscription F1 ≥ {percent(result['ship_bar']['minimum'])}): "
         f"{'met' if result['ship_bar']['met'] else 'NOT met'}",
     ]
-    if not result["complete"]:
-        lines.append(f"Incomplete: {result['incomplete_reason']}")
     team = result.get("briefing_team")
     if team:
         check, editor = team["fact_check"], team["editor"]
         lines.append(
-            f"Fact-checker: caught {check['errors_caught']} of {check['planted_errors']} planted errors "
+            f"Fact-checker ({check['status']}): caught {check['errors_caught']} of {check['planted_errors']} "
+            f"planted errors "
             f"({percent(check['catch_rate'])}); wrongly removed {check['true_bullets_wrongly_removed']} of "
             f"{check['true_bullets']} true bullets; {check['unchecked']} unchecked")
         lines.append(
-            f"Editor: grouping F1 {percent(editor['f1'])} (precision {percent(editor['precision'])}, "
+            f"Editor ({editor['status']}): grouping F1 {percent(editor['f1'])} "
+            f"(precision {percent(editor['precision'])}, "
             f"recall {percent(editor['recall'])}); {editor['shared_stories_found_exactly']} of "
             f"{editor['shared_stories']} shared stories grouped exactly")
+    if not result["complete"]:
+        lines.append(f"Incomplete: {result['incomplete_reason']}")
     return lines
 
 
@@ -483,11 +506,11 @@ def run_eval_command(real_model: bool = False, dataset: str | None = None, outpu
                 return 0
             print("Not interactive: re-run with --yes to approve sending the synthetic emails to OpenAI.")
             return 2
-        result["briefing_team"] = run_team_eval(make_openai_client)
+        attach_team(result, run_team_eval(make_openai_client))
     else:
         model = OfflineModel()
         result = run_eval(cases, lambda: model, "offline")
-        result["briefing_team"] = run_team_eval(lambda: model)
+        attach_team(result, run_team_eval(lambda: model))
     for line in summary_lines(result):
         print(line)
     for path in save_result(result, directory):

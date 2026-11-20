@@ -172,7 +172,10 @@ async def ask_model(state: BriefingState, context: TeamContext, role: str, instr
         record(None)
         return None, "the model's answer was not valid"
     except OpenAIError as error:
-        # The error text is not shown, because it could echo request content.
+        # Charged like any other attempt: the call counts against the cap, and a request that
+        # timed out may still have been billed. The error text is not shown, because it could
+        # echo request content.
+        record(None)
         return None, f"OpenAI error ({type(error).__name__})"
     record(response)
     if response.status == "incomplete":

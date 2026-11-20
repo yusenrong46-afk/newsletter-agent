@@ -231,3 +231,18 @@ def test_the_eval_command_saves_the_team_scores(tmp_path):
     saved = json.loads(next(tmp_path.glob("offline-*.json")).read_text(encoding="utf-8"))
     assert saved["briefing_team"]["fact_check"]["planted_errors"] == 12
     assert "Briefing team" in next(tmp_path.glob("offline-*.html")).read_text(encoding="utf-8")
+
+
+def test_an_unfinished_team_eval_makes_the_whole_eval_incomplete(tmp_path, monkeypatch, capsys):
+    from newsletter_agent import evaluate
+
+    real = evaluate.run_team_eval
+    # One call only: the fact-checker's first batch uses it, so the rest never runs.
+    monkeypatch.setattr(evaluate, "run_team_eval", lambda factory: real(factory, max_model_calls=1))
+
+    assert cli.main(["eval", "--output", str(tmp_path)]) == 1  # Not a clean exit.
+    saved = json.loads(next(tmp_path.glob("offline-*.json")).read_text(encoding="utf-8"))
+    assert saved["complete"] is False and saved["briefing_team"]["editor"]["status"] == "incomplete"
+    assert "editor (incomplete)" in saved["incomplete_reason"]
+    assert "Editor (incomplete)" in capsys.readouterr().out
+    assert "A role did not finish" in next(tmp_path.glob("offline-*.html")).read_text(encoding="utf-8")
