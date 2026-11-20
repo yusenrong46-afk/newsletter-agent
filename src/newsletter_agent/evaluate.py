@@ -301,9 +301,9 @@ def aggregate_runs(cases: list[dict], results: list[dict]) -> dict:
                  "acceptable_runs": right, "note": item.get("note", "")}
         if len(answers) > 1:
             flaky.append(entry)  # The model gave different answers on different runs.
-        elif right == 0:
-            always_wrong.append(entry)
-        else:
+        if right == 0:
+            always_wrong.append(entry)  # Possibly in both lists: wrong every time, in different ways.
+        elif len(answers) == 1:
             always_right += 1
     return {
         "runs": len(results), "complete_runs": sum(1 for result in results if result["complete"]),
@@ -489,6 +489,7 @@ def render_eval_html(result: dict) -> str:
     bar = result["ship_bar"]
     body = f"""
 <h1>Classification quality</h1>
+{incomplete_warning(result)}
 <p class="muted">{escape(result['model'])} · {result['cases']} synthetic emails · status {escape(result['status'])}
 · ship bar: subscription F1 ≥ {percent(bar['minimum'])} ({'met' if bar['met'] else 'not met'})</p>
 <div class="cards">
@@ -508,7 +509,7 @@ def render_eval_html(result: dict) -> str:
 <ul class="notes">{mistakes}</ul>
 {render_hard_html(result.get('hard'))}
 {render_team_html(result.get('briefing_team'))}
-{render_repeated_html(result.get('repeated'))}
+{render_repeated_html(result.get('repeated'), result)}
 <p class="muted small">"Not sent" means the privacy triage kept the email from the model. For personal email that is
 the right outcome and is not counted as a mistake.</p>
 """
@@ -540,11 +541,21 @@ the lenient score. A real newsletter that the privacy rules never send to the mo
 """
 
 
-def render_repeated_html(repeated: dict | None) -> str:
+def incomplete_warning(result: dict) -> str:
+    """A visible warning when any part of the eval did not finish, so partial numbers never look final."""
+    if result.get("complete", True):
+        return ""
+    reason = result.get("incomplete_reason", "Some part of this eval did not finish.")
+    return (f'<p><span class="badge warn">Incomplete</span> <strong>{escape(reason)}</strong> '
+            "Treat the numbers on this page as partial.</p>")
+
+
+def render_repeated_html(repeated: dict | None, result: dict | None = None) -> str:
     if not repeated or repeated["runs"] < 2:
         return ""
     rows = "".join(
-        f"<tr><td>{escape(name)}</td><td class=\"num\">{summary['cases']}</td>"
+        f"<tr><td>{escape(name)}</td><td class=\"num\">{summary['complete_runs']} of {summary['runs']} runs</td>"
+        f"<td class=\"num\">{summary['cases']}</td>"
         f"<td class=\"num\">{range_text(summary['category_accuracy'])}</td>"
         f"<td class=\"num\">{range_text(summary['lenient_category_accuracy'])}</td>"
         f"<td class=\"num\">{range_text(summary['subscription_f1'])}</td>"
@@ -561,9 +572,11 @@ def render_repeated_html(repeated: dict | None) -> str:
     team = repeated["briefing_team"]
     return f"""
 <h2>Repeated runs ({repeated['runs']} runs)</h2>
+{incomplete_warning(result or {})}
 <p class="muted small">A model does not give the same answers every time. Each figure is the mean over
 {repeated['runs']} runs, with the lowest and highest run in brackets.</p>
-<div class="table-wrap"><table><thead><tr><th>Set</th><th class="num">Emails</th><th class="num">Category accuracy</th>
+<div class="table-wrap"><table><thead><tr><th>Set</th><th class="num">Finished</th>
+<th class="num">Emails</th><th class="num">Category accuracy</th>
 <th class="num">Lenient</th><th class="num">Subscription F1</th><th class="num">Changed answer</th>
 <th class="num">Always wrong</th></tr></thead><tbody>{rows}</tbody></table></div>
 <p class="muted small">Briefing team: planted errors caught {range_text(team['catch_rate'])}; true bullets wrongly

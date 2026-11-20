@@ -346,6 +346,30 @@ def test_one_unfinished_run_makes_the_ranges_partial(tmp_path, monkeypatch):
     saved = json.loads(next(tmp_path.glob("offline-*.json")).read_text(encoding="utf-8"))
     assert saved["complete"] is False and "standard set: 1 of 2 runs" in saved["incomplete_reason"]
     assert saved["repeated"]["sets"]["standard"]["complete_runs"] == 1
+    html = next(tmp_path.glob("offline-*.html")).read_text(encoding="utf-8")
+    assert html.count('<span class="badge warn">Incomplete</span>') == 2  # At the top and beside the ranges.
+    assert "standard set: 1 of 2 runs" in html and "1 of 2 runs</td>" in html and "2 of 2 runs</td>" in html
+
+
+def test_a_finished_eval_page_carries_no_incomplete_warning(tmp_path):
+    assert cli.main(["eval", "--runs", "2", "--output", str(tmp_path)]) == 0
+    assert "Incomplete</span>" not in next(tmp_path.glob("offline-*.html")).read_text(encoding="utf-8")
+
+
+def test_an_email_wrong_in_different_ways_each_run_is_both_changed_and_always_wrong():
+    from newsletter_agent.evaluate import aggregate_runs
+
+    cases = [case("varies", "editorial_newsletter"), case("fine", "transactional")]
+    triage = {"varies": "bulk", "fine": "bulk"}
+
+    def one_run(answer):
+        outcome = {"varies": answer, "fine": "transactional"}
+        return {**score(cases, outcome, triage), "complete": True, "usage": {"total_tokens": 1}}
+
+    summary = aggregate_runs(cases, [one_run("transactional"), one_run("personal_or_other")])
+    assert [entry["id"] for entry in summary["changed_between_runs"]] == ["varies"]
+    assert [entry["id"] for entry in summary["always_wrong"]] == ["varies"]  # Never right, so it counts here too.
+    assert summary["stable_right"] == 1
 
 
 def test_a_multi_run_result_never_replaces_a_single_run_from_the_same_day(tmp_path):

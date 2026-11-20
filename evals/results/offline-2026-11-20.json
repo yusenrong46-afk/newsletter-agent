@@ -1,7 +1,7 @@
 {
  "label": "offline",
  "model": "offline stand-in (keyword rules)",
- "generated_at": "2026-11-20T15:10:38+00:00",
+ "generated_at": "2026-11-20T15:52:57+00:00",
  "dataset": {
   "cases": 96,
   "by_label": {
@@ -447,7 +447,7 @@
  "hard": {
   "label": "offline",
   "model": "offline stand-in (keyword rules)",
-  "generated_at": "2026-11-20T15:10:39+00:00",
+  "generated_at": "2026-11-20T15:52:57+00:00",
   "dataset": {
    "cases": 65,
    "by_label": {
