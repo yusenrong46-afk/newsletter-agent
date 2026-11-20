@@ -18,10 +18,10 @@ Nothing is sent until you approve: interactively, with `--yes`, or once with `ne
 | 3+ messages from one address, no such evidence | Sender, subject, and signals; **no body** |
 | Neither | **Nothing** |
 
-- **Briefings** send up to 6,000 characters (links removed) of each new message already classified as an editorial newsletter.
+- **Briefings** send up to 6,000 characters (links removed) of each new message already classified as an editorial newsletter. That text is sent **twice**: once to write the bullets, and once more, beside those bullets, so a fact-checking pass can remove any the text does not support. A third pass that picks the top stories receives the bullets only, never the email text. Set `fact_check = false` or `top_stories = false` under `[briefing]` in `config.toml` to turn either pass off.
 - **Chat** sends your questions, plus totals and lists from your saved report. It sends summaries of specific issues only after you confirm in the terminal.
 - **Retention:** all requests use `store=False`, which asks OpenAI not to store the responses. OpenAI's own data policies still apply.
-- **Prompt injection:** every prompt labels email text as untrusted data. The classifier and the summarizer have no tools.
+- **Prompt injection:** every prompt labels email text as untrusted data, and the bullets one pass hands to the next are labelled the same way. The classifier, summarizer, fact-checker and editor have no tools. The fact-checker can only remove a bullet, never rewrite one.
 
 ## What is stored on your computer
 

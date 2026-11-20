@@ -1,10 +1,12 @@
 """The daily newsletter briefing.
 
     scan new mail -> classify only what is new -> pick newsletters
-      -> summarize in small batches -> validate sources -> HTML page + notification
+      -> summarize in small batches -> validate sources
+      -> fact-check the bullets -> pick top stories -> HTML page + notification
 
 Like classification, the model writes text but Python checks it: every bullet
 must cite a message that was actually sent in that batch, or it is dropped.
+The fact-check and top-stories steps are in briefing_team.py.
 """
 
 import asyncio
@@ -175,8 +177,12 @@ def add_usage(result: SummaryResult, budget: Budget, response, estimate: int):
         budget.tokens += estimate
 
 
-async def summarize_issues(gmail, openai_client, issues: list[dict], budget: Budget) -> SummaryResult:
-    """Summarize issues in small batches. Bodies stay in memory and are never saved."""
+async def summarize_issues(gmail, openai_client, issues: list[dict], budget: Budget,
+                           texts: dict[str, str] | None = None) -> SummaryResult:
+    """Summarize issues in small batches. Bodies stay in memory and are never saved.
+
+    If `texts` is given, each issue's text is also put there (in memory only), for the fact-checker.
+    """
     result = SummaryResult()
     for start in range(0, len(issues), ISSUES_PER_CALL):
         batch = issues[start:start + ISSUES_PER_CALL]
@@ -187,6 +193,8 @@ async def summarize_issues(gmail, openai_client, issues: list[dict], budget: Bud
             break
         if not items:
             continue
+        if texts is not None:
+            texts.update({item["id"]: item["text"] for item in items})
         ids = [item["id"] for item in items]
         payload = json.dumps({"issues": items}, ensure_ascii=False)
         estimate = estimate_tokens(BRIEFING_INSTRUCTIONS) + estimate_tokens(payload) + BRIEFING_MAX_OUTPUT_TOKENS
@@ -259,8 +267,12 @@ def briefing_window_start(state: dict, now: datetime) -> tuple[datetime, str | N
 
 
 def build_briefing(
-    issues: list[dict], summary: SummaryResult, report: dict, window: tuple[int, int], notes: list[str]
+    issues: list[dict], summary: SummaryResult, report: dict, window: tuple[int, int], notes: list[str],
+    team: dict | None = None,
 ) -> dict:
+    """`team` is BriefingState.to_dict(): fact-check and top-story results, never issue text."""
+    team = team or {"status": {"fact_check": "not run", "editor": "not run"}, "usage": {}, "top_stories": [],
+                    "unsupported_bullets": 0, "unchecked_bullets": 0, "notes": []}
     sections: dict[str, list[dict]] = {}
     not_summarized = []
     for issue in issues:
@@ -280,11 +292,15 @@ def build_briefing(
         "counts": {
             "issues": len(issues), "summarized": len(issues) - len(not_summarized),
             "publications": len(sections), "dropped_bullets": summary.dropped_bullets,
+            "unsupported_bullets": team["unsupported_bullets"], "unchecked_bullets": team["unchecked_bullets"],
+            "top_stories": len(team["top_stories"]),
         },
-        "usage": {"classification": inventory_usage, "summaries": summary.usage},
+        "top_stories": team["top_stories"],
+        "team": team["status"],
+        "usage": {"classification": inventory_usage, "summaries": summary.usage, **team["usage"]},
         "failure": summary.failure,
         "budget_exhausted": summary.budget_exhausted,
-        "notes": notes,
+        "notes": [*notes, *team["notes"]],
     }
 
 
@@ -297,6 +313,24 @@ def render_briefing_html(briefing: dict, demo: bool = False) -> str:
     ]
     if not briefing["sections"] and not briefing["not_summarized"]:
         parts.append('<div class="section"><p>No new newsletter issues in this period.</p></div>')
+    if briefing.get("top_stories"):
+        parts.append("<h2>Top stories</h2>")
+        for story in briefing["top_stories"]:
+            count = story["publication_count"]
+            covered = f"Covered by {count} newsletters: " if count > 1 else "From "
+            bullets = "".join(
+                f'<li>{escape(bullet["text"])} <span class="source">· {escape(bullet["publication"])}</span></li>'
+                for bullet in story["bullets"]
+            )
+            only = story["bullets"][0]["text"] if len(story["bullets"]) == 1 else None
+            if only and only.rstrip(".!? ").casefold() == story["headline"].rstrip(".!? ").casefold():
+                bullets = ""  # The headline already says exactly what the one bullet says.
+            parts.append(
+                f'<div class="section"><h3>{escape(story["headline"])}</h3>'
+                f'<p class="source">{covered}{escape(", ".join(story["publications"]))}</p>'
+                + (f"<ul>{bullets}</ul>" if bullets else "") + "</div>"
+            )
+        parts.append("<h2>By newsletter</h2>")
     for section in briefing["sections"]:
         parts.append(f'<div class="section"><h3>{escape(section["publication"])}</h3>')
         for issue in section["issues"]:
@@ -314,11 +348,24 @@ def render_briefing_html(briefing: dict, demo: bool = False) -> str:
         )
         parts.append(f"<h2>Not summarized</h2><ul class=\"notes\">{rows}</ul>")
     usage = briefing["usage"]["summaries"]
+    team = briefing.get("team", {})
     notes = [
         *briefing["notes"],
         "Summaries are written by a model from the email text. Check the original email for anything important.",
-        f"Summary usage: {usage['model_calls']} calls, {usage['total_tokens']:,} tokens (actual).",
     ]
+    if team.get("fact_check") == "done":
+        notes.append("A second model pass checked every bullet against its email and removed unsupported ones. "
+                     "It reduces mistakes; it does not rule them out.")
+    elif team.get("fact_check") == "off":
+        notes.append("Fact-checking is turned off (fact_check in config.toml).")
+    if briefing.get("top_stories"):
+        notes.append("Top-story headlines and grouping are written by a model from the bullets, not from the emails.")
+    extra = [briefing["usage"][role] for role in ("fact_check", "editor") if role in briefing["usage"]]
+    notes.append(
+        f"Model usage: {usage['model_calls'] + sum(u['model_calls'] for u in extra)} calls, "
+        f"{usage['total_tokens'] + sum(u['total_tokens'] for u in extra):,} tokens (actual) "
+        "for summaries, fact-check and top stories."
+    )
     if counts["dropped_bullets"]:
         notes.append(f"{counts['dropped_bullets']} bullets were dropped because they did not cite a valid source.")
     if briefing["inventory_status"] != "complete":
@@ -372,8 +419,8 @@ async def run_briefing(gmail, store: InventoryStore, settings: dict, directory: 
     approval = {"granted": approved}
 
     def confirm_classification(preflight: dict) -> bool:
-        approval["granted"] = ask(f"Classify {preflight['messages_to_classify']} new messages and summarize "
-                                  f"today's newsletters with OpenAI ({budget_text})?")
+        approval["granted"] = ask(f"Classify {preflight['messages_to_classify']} new messages, then summarize and "
+                                  f"fact-check today's newsletters with OpenAI ({budget_text})?")
         return approval["granted"]
 
     options = InventoryOptions(
@@ -388,21 +435,26 @@ async def run_briefing(gmail, store: InventoryStore, settings: dict, directory: 
                     max(0, settings["max_tokens"] - report["usage"]["tokens_this_run"]))
 
     summary = SummaryResult()
+    team = None
     if issues and not approval["granted"]:
-        approval["granted"] = ask(f"Summarize {len(issues)} newsletter issues with OpenAI ({budget_text})?")
+        approval["granted"] = ask(
+            f"Summarize and fact-check {len(issues)} newsletter issues with OpenAI ({budget_text})?")
     if issues and approval["granted"]:
         try:
             openai_client = openai_factory()
         except (ValueError, OSError) as error:
             summary.failure = str(error)
         else:
-            summary = await summarize_issues(gmail, openai_client, issues, budget)
+            from .briefing_team import TeamContext, run_team  # Imported here: that module builds on this one.
+
+            team_state = await run_team(issues, TeamContext(gmail, openai_client, budget, settings))
+            summary, team = team_state.summary, team_state.to_dict()
     elif issues:
         summary.not_summarized = {issue["message_id"]: "not approved" for issue in issues}
 
     notes = [window_note] if window_note else []
     window = (report["run"]["window_start_ms"], report["run"]["window_end_ms"])
-    briefing = build_briefing(issues, summary, report, window, notes)
+    briefing = build_briefing(issues, summary, report, window, notes, team)
     briefing["path"] = str(save_briefing(briefing, directory, moment, demo))
     if remember and briefing_succeeded(briefing):
         config.write_private_file(directory / "briefing_state.json",
@@ -439,6 +491,8 @@ def describe_briefing(briefing: dict) -> str:
     return (
         f"{counts['summarized']} of {counts['issues']} issues summarized from {counts['publications']} newsletters; "
         f"{usage['model_calls']} summary calls, {usage['total_tokens']:,} tokens."
+        + (f" {counts['unsupported_bullets']} bullets removed by the fact-check." if counts.get("unsupported_bullets")
+           else "")
     )
 
 

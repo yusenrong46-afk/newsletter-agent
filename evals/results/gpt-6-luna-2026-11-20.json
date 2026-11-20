@@ -1,0 +1,239 @@
+{
+ "label": "gpt-6-luna",
+ "model": "gpt-6-luna",
+ "generated_at": "2026-11-20T13:40:21+00:00",
+ "dataset": {
+  "cases": 96,
+  "by_label": {
+   "editorial_newsletter": 38,
+   "product_update": 11,
+   "transactional": 20,
+   "promotional_subscription": 20,
+   "personal_or_other": 7
+  },
+  "by_source": {
+   "demo": 56,
+   "hard": 40
+  }
+ },
+ "status": "complete",
+ "complete": true,
+ "cases": 96,
+ "subscription_detection": {
+  "true_positive": 65,
+  "false_positive": 0,
+  "false_negative": 4,
+  "true_negative": 27,
+  "precision": 1.0,
+  "recall": 0.942,
+  "f1": 0.9701,
+  "accuracy": 0.9583
+ },
+ "category_accuracy": 0.957,
+ "macro_f1": 0.9507,
+ "per_category": {
+  "editorial_newsletter": {
+   "support": 38,
+   "predicted": 38,
+   "precision": 1.0,
+   "recall": 1.0,
+   "f1": 1.0
+  },
+  "promotional_subscription": {
+   "support": 20,
+   "predicted": 20,
+   "precision": 1.0,
+   "recall": 1.0,
+   "f1": 1.0
+  },
+  "product_update": {
+   "support": 11,
+   "predicted": 7,
+   "precision": 1.0,
+   "recall": 0.6364,
+   "f1": 0.7778
+  },
+  "transactional": {
+   "support": 20,
+   "predicted": 21,
+   "precision": 0.9524,
+   "recall": 1.0,
+   "f1": 0.9756
+  },
+  "personal_or_other": {
+   "support": 4,
+   "predicted": 4,
+   "precision": 1.0,
+   "recall": 1.0,
+   "f1": 1.0
+  },
+  "uncertain": {
+   "support": 0,
+   "predicted": 3,
+   "precision": 0.0,
+   "recall": null,
+   "f1": null
+  }
+ },
+ "confusion": {
+  "editorial_newsletter": {
+   "editorial_newsletter": 38,
+   "promotional_subscription": 0,
+   "product_update": 0,
+   "transactional": 0,
+   "personal_or_other": 0,
+   "uncertain": 0,
+   "unresolved": 0,
+   "pending": 0,
+   "not_sent": 0
+  },
+  "promotional_subscription": {
+   "editorial_newsletter": 0,
+   "promotional_subscription": 20,
+   "product_update": 0,
+   "transactional": 0,
+   "personal_or_other": 0,
+   "uncertain": 0,
+   "unresolved": 0,
+   "pending": 0,
+   "not_sent": 0
+  },
+  "product_update": {
+   "editorial_newsletter": 0,
+   "promotional_subscription": 0,
+   "product_update": 7,
+   "transactional": 1,
+   "personal_or_other": 0,
+   "uncertain": 3,
+   "unresolved": 0,
+   "pending": 0,
+   "not_sent": 0
+  },
+  "transactional": {
+   "editorial_newsletter": 0,
+   "promotional_subscription": 0,
+   "product_update": 0,
+   "transactional": 20,
+   "personal_or_other": 0,
+   "uncertain": 0,
+   "unresolved": 0,
+   "pending": 0,
+   "not_sent": 0
+  },
+  "personal_or_other": {
+   "editorial_newsletter": 0,
+   "promotional_subscription": 0,
+   "product_update": 0,
+   "transactional": 0,
+   "personal_or_other": 4,
+   "uncertain": 0,
+   "unresolved": 0,
+   "pending": 0,
+   "not_sent": 3
+  },
+  "uncertain": {
+   "editorial_newsletter": 0,
+   "promotional_subscription": 0,
+   "product_update": 0,
+   "transactional": 0,
+   "personal_or_other": 0,
+   "uncertain": 0,
+   "unresolved": 0,
+   "pending": 0,
+   "not_sent": 0
+  }
+ },
+ "triage": {
+  "tiers": {
+   "bulk": 87,
+   "not_candidate": 3,
+   "recurring": 6
+  },
+  "subscriptions_reaching_model": 1.0,
+  "personal_kept_from_model_or_headers_only": 0.8571
+ },
+ "unresolved_rate": 0.0,
+ "publication_name_accuracy": 1.0,
+ "mistakes": [
+  {
+   "id": "hard-analytics-0",
+   "subject": "Your weekly site report: week 22",
+   "expected": "product_update",
+   "predicted": "uncertain",
+   "note": "Automated weekly report with no list headers; headers only"
+  },
+  {
+   "id": "hard-analytics-1",
+   "subject": "Your weekly site report: week 21",
+   "expected": "product_update",
+   "predicted": "uncertain",
+   "note": "Automated weekly report with no list headers; headers only"
+  },
+  {
+   "id": "hard-analytics-2",
+   "subject": "Your weekly site report: week 20",
+   "expected": "product_update",
+   "predicted": "uncertain",
+   "note": "Automated weekly report with no list headers; headers only"
+  },
+  {
+   "id": "hard-service-outage",
+   "subject": "Scheduled maintenance on 8 June",
+   "expected": "product_update",
+   "predicted": "transactional",
+   "note": ""
+  }
+ ],
+ "usage": {
+  "model_calls": 4,
+  "input_tokens": 10463,
+  "output_tokens": 4419,
+  "total_tokens": 14882,
+  "tokens_per_1000_emails": 155021
+ },
+ "ship_bar": {
+  "metric": "subscription_detection.f1",
+  "minimum": 0.9,
+  "met": true
+ },
+ "briefing_team": {
+  "fact_check": {
+   "bullets": 34,
+   "planted_errors": 12,
+   "errors_caught": 12,
+   "errors_missed": 0,
+   "catch_rate": 1.0,
+   "true_bullets": 22,
+   "true_bullets_wrongly_removed": 0,
+   "wrongly_removed_rate": 0.0,
+   "unchecked": 0,
+   "status": "done"
+  },
+  "editor": {
+   "bullets": 14,
+   "shared_stories": 3,
+   "shared_stories_found_exactly": 3,
+   "true_pairs": 5,
+   "predicted_pairs": 5,
+   "correct_pairs": 5,
+   "precision": 1.0,
+   "recall": 1.0,
+   "f1": 1.0,
+   "top_stories": 5,
+   "status": "done",
+   "headlines": [
+    "Central bank holds main rate at 4.25%",
+    "Quill 1.0 launches with a new plugin system",
+    "Selene-3 detects water ice near the Moon’s south pole",
+    "Marlow wetland bird count rises to 1,240",
+    "Council approves next year’s budget; bus fares rise"
+   ]
+  },
+  "usage": {
+   "model_calls": 3,
+   "input_tokens": 2996,
+   "output_tokens": 505,
+   "total_tokens": 3501
+  }
+ }
+}

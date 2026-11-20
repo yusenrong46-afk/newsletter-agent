@@ -31,6 +31,10 @@ def load(name: str) -> dict:
     return json.loads((RESULTS / name).read_text(encoding="utf-8"))
 
 
+def all_evals(prefix: str) -> list[dict]:
+    return [json.loads(path.read_text(encoding="utf-8")) for path in sorted(EVALS.glob(f"{prefix}-*.json"))]
+
+
 def latest_eval(prefix: str) -> dict | None:
     files = sorted(EVALS.glob(f"{prefix}-*.json"))
     return json.loads(files[-1].read_text(encoding="utf-8")) if files else None
@@ -410,6 +414,14 @@ def build(before: dict, after: dict, ci: dict, model_eval: dict | None, offline_
                "CI runs the full test suite, the demo and the eval on Linux, macOS and Windows for every pull request.")
 
     if model_eval:
+        runs = all_evals("gpt-6-luna")
+        if len(runs) > 1:
+            listed = "; ".join(f"{run['generated_at'][:10]}: {pct(run['category_accuracy'])} right category, "
+                               f"{len(run['mistakes'])} mistakes" for run in runs)
+            runs_note = (f"The model's answers vary a little between runs on the same emails ({listed}), mostly on "
+                         "borderline cases, so read the score as a range, not one exact number.")
+        else:
+            runs_note = (f"One run on {model_eval['cases']} emails shows the error rate is low, not that it is zero.")
         detection_m, detection_o = model_eval["subscription_detection"], (offline_eval or {}).get("subscription_detection", {})
         accuracy = f"""
 <div class="panel bars">
@@ -426,10 +438,9 @@ def build(before: dict, after: dict, ci: dict, model_eval: dict | None, offline_
   for personal mail.</p>
   {confusion_table(model_eval)}
 </div>
-<p class="muted small">Honest limits: these are {model_eval['cases']} invented, fairly clear-cut emails, and the run used
-{model_eval['usage']['total_tokens']:,} tokens ({model_eval['usage']['model_calls']} calls). A perfect score on {model_eval['cases']}
-emails suggests the real error rate is low (likely under about {300 / model_eval['cases']:.0f}%), not that it is zero.
-Real inboxes are messier. Rerun with <code>newsletter-agent eval --real-model</code>.</p>"""  # noqa: E501
+<p class="muted small">Honest limits: these are {model_eval['cases']} invented, fairly clear-cut emails, and this run used
+{model_eval['usage']['total_tokens']:,} tokens ({model_eval['usage']['model_calls']} calls). {runs_note} Real inboxes are
+messier. Rerun with <code>newsletter-agent eval --real-model</code>.</p>"""  # noqa: E501
         accuracy_big = f"""<div class="big">{counter(0, detection_m['f1'] * 100, 0, '%')}<span>of subscriptions spotted correctly
 (F1), {pct(model_eval['category_accuracy'])} put in the right category, {len(model_eval['mistakes'])} mistakes</span></div>"""
     else:
