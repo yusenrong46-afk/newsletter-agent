@@ -7,14 +7,15 @@ deduplicated, and Python enforces exact time bounds with internalDate.
 import sys
 from collections import Counter
 from dataclasses import asdict, dataclass, field
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
-from .gmail_client import GmailMcpClient, GmailToolError, make_message_record, sender_address
+from .gmail_client import GmailMcpClient, GmailToolError, gather_in_order, make_message_record, sender_address
 from .store import InventoryStore
 
 SECONDS_PER_DAY = 86400
 EXCLUDED_LABELS = ("SENT", "DRAFT", "SPAM", "TRASH", "CHAT")
 RECURRING_SENDER_MINIMUM = 3
+READ_CHUNK = 16  # IDs read in parallel at a time; results are applied in listing order.
 DEFAULT_MAX_MODEL_CALLS = 400
 DEFAULT_MAX_TOKENS = 4_500_000  # Covers a mailbox of about 5,000 candidates.
 
@@ -45,7 +46,9 @@ class InventoryState:
     unavailable: dict[str, str] = field(default_factory=dict)
     unresolved: dict[str, str] = field(default_factory=dict)
     disappeared: list[str] = field(default_factory=list)
-    usage_total: dict[str, int] = field(default_factory=lambda: {"model_calls": 0, "input_tokens": 0, "output_tokens": 0, "total_tokens": 0})
+    usage_total: dict[str, int] = field(
+        default_factory=lambda: {"model_calls": 0, "input_tokens": 0, "output_tokens": 0, "total_tokens": 0}
+    )
 
 
 @dataclass
@@ -62,6 +65,7 @@ class InventoryRun:
     budget_exhausted: bool = False
     interrupted: bool = False
     failures: list[dict] = field(default_factory=list)
+    slow_mode: bool = False  # Gmail rate-limited a read, so the rest of the run read one at a time.
     duplicate_listings: int = 0
     pages_listed: int = 0
     metadata_fetched: int = 0
@@ -82,7 +86,7 @@ class InventoryRun:
 
 
 def utc_iso(moment: datetime) -> str:
-    return moment.astimezone(timezone.utc).isoformat(timespec="seconds")
+    return moment.astimezone(UTC).isoformat(timespec="seconds")
 
 
 def progress(message: str):
@@ -96,7 +100,9 @@ def build_scan_query(start_ms: int, end_ms: int) -> str:
     return f"after:{after} before:{before} -in:sent -in:drafts -in:chats"
 
 
-def start_or_resume_state(options: InventoryOptions, store: InventoryStore, now: datetime) -> tuple[InventoryState, bool]:
+def start_or_resume_state(
+    options: InventoryOptions, store: InventoryStore, now: datetime
+) -> tuple[InventoryState, bool]:
     if options.resume:
         saved = store.load_checkpoint()
         if saved is None:
@@ -130,17 +136,25 @@ async def scan_mailbox(run: InventoryRun, gmail: GmailMcpClient):
 
     The listing always restarts from page one, because an old page token may
     no longer be valid. Deduplicating by ID prevents double counting.
+
+    Each page's new IDs are read READ_CHUNK at a time in parallel, then applied
+    in listing order, so the result is the same as reading one at a time.
     """
     state, store = run.state, run.store
     previously_discovered = set(state.discovered) if run.resumed else set()
-    seen, seen_set, in_scope_count = [], set(), 0
+    seen: list[str] = []
+    seen_set: set[str] = set()
+    in_scope_count = 0
     page_token, stop = None, False
     try:
         while not stop:
             page = await gmail.search(state.query, page_token)
             run.pages_listed += 1
-            for item in page.get("messages", []):
-                message_id = item["id"]
+            listed = [item["id"] for item in page.get("messages", [])]
+            to_read = list(dict.fromkeys(message_id for message_id in listed if message_id not in seen_set))
+            fetched: dict[str, dict | GmailToolError | None] = {}
+            next_read = 0
+            for message_id in listed:
                 if message_id in seen_set:
                     run.duplicate_listings += 1
                     continue
@@ -148,10 +162,24 @@ async def scan_mailbox(run: InventoryRun, gmail: GmailMcpClient):
                     run.message_cap_reached = True
                     stop = True
                     break
-                state.unavailable.pop(message_id, None)
-                record = await fetch_metadata(run, gmail, message_id)
+                if message_id not in fetched:
+                    chunk = to_read[next_read:next_read + READ_CHUNK]
+                    next_read += len(chunk)
+                    # The parallel reads only fill the header cache. Run state changes below,
+                    # one ID at a time in listing order, so an early stop leaves nothing half-recorded.
+                    records = await gather_in_order(
+                        chunk, lambda chunk_id: fetch_metadata_or_error(run, gmail, chunk_id))
+                    fetched.update(zip(chunk, records, strict=True))
+                record = fetched[message_id]
+                if isinstance(record, GmailToolError):
+                    # Raised in listing order: every ID before it still counts, as with one-at-a-time reads.
+                    raise record
                 # Count an ID only after its read finished, so an interrupted or
                 # failed read can never leave a discovered ID with no outcome.
+                if record is None:
+                    state.unavailable[message_id] = "not_found"
+                else:
+                    state.unavailable.pop(message_id, None)
                 seen.append(message_id)
                 seen_set.add(message_id)
                 if record and exclusion_reason(record, state) is None:
@@ -187,7 +215,20 @@ def save_discovered(run: InventoryRun, seen: list[str], previously_discovered: s
     run.save_checkpoint()
 
 
+async def fetch_metadata_or_error(run: InventoryRun, gmail: GmailMcpClient, message_id: str):
+    """Like fetch_metadata, but a Gmail failure is returned instead of raised."""
+    try:
+        return await fetch_metadata(run, gmail, message_id)
+    except GmailToolError as error:
+        return error
+
+
 async def fetch_metadata(run: InventoryRun, gmail: GmailMcpClient, message_id: str) -> dict | None:
+    """The header record from the cache or Gmail; None if Gmail no longer has the message.
+
+    This only touches the cache and counters. The caller records "unavailable" when it
+    counts the ID, because several of these run at once and the run may stop before then.
+    """
     cached = run.store.metadata.get(message_id)
     if cached:
         run.metadata_from_cache += 1
@@ -197,7 +238,6 @@ async def fetch_metadata(run: InventoryRun, gmail: GmailMcpClient, message_id: s
     except GmailToolError as error:
         if error.code != "not_found":
             raise
-        run.state.unavailable[message_id] = "not_found"
         return None
     record = make_message_record(raw)
     run.store.metadata[message_id] = record
@@ -207,7 +247,8 @@ async def fetch_metadata(run: InventoryRun, gmail: GmailMcpClient, message_id: s
 
 async def refresh_unread_flags(run: InventoryRun, gmail: GmailMcpClient):
     """Unread can change at any time, so ask Gmail again instead of trusting the cache."""
-    unread, page_token = set(), None
+    unread: set[str] = set()
+    page_token = None
     try:
         while True:
             page = await gmail.search(f"{run.state.query} is:unread", page_token)
@@ -219,7 +260,7 @@ async def refresh_unread_flags(run: InventoryRun, gmail: GmailMcpClient):
         progress(f"Could not refresh unread flags ({error.code}); using flags from when metadata was read.")
         return
     run.unread_ids = unread
-    run.unread_observed_at = utc_iso(datetime.now(timezone.utc))
+    run.unread_observed_at = utc_iso(datetime.now(UTC))
 
 
 def in_scope_records(run: InventoryRun) -> list[dict]:

@@ -10,11 +10,14 @@ It runs on your own computer, reads Gmail read-only through a local [MCP](https:
 
 **[→ See the live demo report](https://yusenrong46-afk.github.io/newsletter-agent/)** · [demo briefing](https://yusenrong46-afk.github.io/newsletter-agent/briefing.html). Both are built from a synthetic mailbox by CI.
 
+**New in 0.2:** about 6× faster first scans, a SQLite store, Windows and Linux support, a measured accuracy eval, and cleanup suggestions. See the [animated before/after report](docs/upgrade-report.html) ([live](https://yusenrong46-afk.github.io/newsletter-agent/upgrade-report.html)).
+
 ![Demo inventory report](docs/images/report.png)
 
 ## What it does
 
-- **Inventory:** scans 90 days of mail, including archived mail, and reports each newsletter or subscription with how much it sends and how much sits unread.
+- **Inventory:** scans 90 days of mail, including archived mail, and reports each newsletter or subscription with how much it sends, how much sits unread, and a weekly trend.
+- **Cleanup suggestions:** points out newsletters you mostly don't open ("15 received, 14 still unread"). It only suggests; it never unsubscribes or changes anything.
 - **Briefing:** each morning, summarizes only *new* editorial newsletters. Every bullet cites the email it came from.
 - **Chat:** answers questions like "what do I get most?" or "summarize Byte Garden from this week."
 - **Safety:** before anything costs money, it shows a free preflight with the scope and a token estimate, asks for approval, and enforces a hard budget.
@@ -52,7 +55,7 @@ You bring your own Google OAuth client and OpenAI key, so your email never passe
 5. `newsletter-agent inventory --preflight` is free: it scans and estimates cost without calling OpenAI.
 6. `newsletter-agent inventory` shows the same preflight, asks y/N, then classifies.
 7. `newsletter-agent report --open` opens the interactive HTML report.
-8. `newsletter-agent brief --open` makes today's briefing; `newsletter-agent schedule 07:00` runs it daily (macOS).
+8. `newsletter-agent brief --open` makes today's briefing; `newsletter-agent schedule 07:00` runs it daily (macOS, Linux and Windows).
 
 | Command | What it does |
 |---|---|
@@ -62,9 +65,10 @@ You bring your own Google OAuth client and OpenAI key, so your email never passe
 | `inventory [--days N] [--preflight] [--max-messages N] [--resume] [--yes]` | Runs the inventory; budgets via `--max-model-calls` and `--max-tokens` |
 | `report [--open]` | Latest HTML report |
 | `brief [--yes] [--open]` | Summarizes new newsletter issues |
-| `schedule HH:MM` / `unschedule` | Daily briefing with launchd, after explicit consent |
+| `schedule HH:MM` / `unschedule` | Daily briefing (launchd, systemd timer or Task Scheduler), after explicit consent |
 | `chat` | Asks about your newsletters |
 | `demo [--open] [--real-model]` | Synthetic mailbox, real pipeline |
+| `eval [--real-model]` | Scores classification on 96 labelled synthetic emails |
 
 ## How it works
 
@@ -120,8 +124,8 @@ Details: [docs/privacy.md](docs/privacy.md).
 - It inventories *observed* email. It doesn't prove what you're subscribed to or whether anything is paid.
 - A newsletter with no mailing-list headers and fewer than 3 messages in the window isn't classified. The report lists those senders.
 - One publication using two sender addresses appears as two groups.
-- The first full scan reads messages one at a time, at roughly 3 per second. Reruns use the cache.
-- Scheduling is macOS only; on Linux the `schedule` command prints a cron line instead. There's no hosted or multi-user version, by design.
+- The first full scan reads up to 8 messages at a time: about 4 to 5 minutes for 5,000 messages, where version 0.1 took about 28. Reruns use the cache.
+- Runs on macOS, Linux and Windows (CI tests all three). On Linux without systemd, `schedule` prints a cron line instead, and Windows Task Scheduler skips a run while the computer is off. On Windows, the private folder relies on your user profile's permissions, because POSIX file modes don't exist there. There's no hosted or multi-user version, by design.
 
 ## Development
 

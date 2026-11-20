@@ -6,6 +6,7 @@
 |---|---|
 | `cli.py` | The `newsletter-agent` command and subcommands |
 | `config.py` | Data folder, `config.toml`, OpenAI key, private atomic file writes |
+| `store.py` | SQLite caches and checkpoints, migration from v0.1 JSON, retention, the run lock |
 | `gmail_server.py` | **The only code that uses Google's libraries.** OAuth, the two MCP tools, MIME → text |
 | `gmail_client.py` | MCP client over stdio; turns tool results into small message records |
 | `scan.py` | Freeze the window, list every page, read metadata, triage, refresh unread flags |
@@ -15,14 +16,18 @@
 | `inventory.py` | The inventory workflow and its command |
 | `briefing.py` | Incremental briefing: select, summarize, validate sources, render, notify |
 | `chat.py` | Chat with three local read-only tools |
-| `schedule.py` | launchd install/remove after consent |
+| `schedule.py` | Daily schedule after consent: launchd (macOS), systemd user timer (Linux), Task Scheduler (Windows) |
 | `demo.py` | Synthetic mailbox, offline model stand-in, demo site |
+| `evaluate.py` | The quality eval: labelled synthetic dataset (`eval_data/dataset.jsonl`), scoring, results page |
 
 ## Inventory flow
 
 1. **Freeze the window.** Start and end are fixed once per run. The Gmail query uses epoch `after:`/`before:` with a day of padding, and Python enforces `start <= internalDate < end` exactly.
 2. **List every page** through `search_emails`, following `nextPageToken` until it runs out. IDs are deduplicated. `resultSizeEstimate` is never used as a count.
 3. **Read metadata only** through `read_email(mode="metadata")`, with headers matched case-insensitively. Results are cached, since Gmail message content is immutable.
+   - **In parallel, in order:** each page's new IDs are read 16 at a time, with up to 8 reads in flight (`READ_CONCURRENCY`), and the results are applied in listing order. The parallel reads only fill the header cache; run state (discovered, unavailable) changes one ID at a time as each is counted, so stopping early (a cap, a failed read, Ctrl-C) leaves nothing half-recorded. Duplicates, the `--max-messages` cap, and "an ID counts only once its read finished" behave exactly as with one-at-a-time reads, and the report does not depend on which read finished first. Body excerpts for classification and briefing texts are read the same way.
+   - **Server side:** the two MCP tools are async and run Google's blocking client in worker threads (`SERVER_THREADS = 8`), each with its own Gmail client, because httplib2 is not thread-safe. Eight parallel reads stay well under Gmail's per-user rate limit.
+   - **Rate limits:** if a read is still rate-limited after Google's own retries, the client switches to slow mode for the rest of the run (one read at a time, backing off 2, 4, then 8 seconds) before giving up, and the report says so.
 4. **Triage** with Python rules on headers, which decide what may be sent to the model (see [privacy.md](privacy.md)).
 5. **Preflight:** counts, cache hits, and a token estimate, with no model calls.
 6. **Approval and budget:** one confirmation, then a hard limit on calls and tokens, checked before every call using the full output reservation.
@@ -35,6 +40,13 @@
    - the groups add up to the subscription messages
 9. **Report** as JSON, Markdown, and static HTML.
 
+### Trends and cleanup suggestions
+
+Both are plain Python on dates and unread flags, with no model calls.
+- **Weekly counts:** each publication's messages per week from the window start (90 days is 12 weeks plus a 6-day last week). Reconciliation checks that every publication's weekly counts add up to its total.
+- **Trend:** `new` (first seen in the last 14 days), `fading` (nothing in the last 30 days, at least 3 before), `rising` or `falling` (comparing the two halves of the window), otherwise `steady`. Windows shorter than 28 days, such as a briefing's, get no trend.
+- **Cleanup suggestions:** only observed publications with at least 4 messages. 80% or more unread suggests "consider unsubscribing"; 50 to 79% suggests "skim or reduce". Suggestions are ranked by unread count, then name, so the order is stable. If unread flags could not be refreshed, suggestions are turned off and the report says why. Reasons are built from numbers only, and no unsubscribe link is stored or shown.
+
 ### Grouping rules
 
 - **Group key:** the List-ID if present, otherwise the exact sender address. Never the domain or delivery service.
@@ -44,7 +56,10 @@
 
 ## Checkpoints and resume
 
-- **Saving:** state is saved after every page and every batch, with an atomic write (temporary file plus `os.replace`).
+- **Saving:** caches and checkpoints live in one SQLite database (`inventory/newsletter.db`, WAL mode, `synchronous=FULL`). Each page and each batch is one committed transaction, so a crash or a hard kill loses at most the page or batch in progress, and the database is never left half-written. Version 0.1 rewrote whole JSON files after every page, which grew with the square of the mailbox size.
+- **Upgrading:** v0.1's JSON caches are imported once and renamed to `*.json.migrated`, so an upgrade never re-reads Gmail or re-bills the model.
+- **Corruption:** only a database that SQLite itself reports as damaged is moved aside to `newsletter.db.corrupt-<time>`, with a warning, and the caches are rebuilt. A database that is merely busy (another run is mid-write) is left alone and reported as "another run is using this data"; other failures, such as a full disk, are reported as they are. Opening an up-to-date database only reads, so it never waits on a running scan.
+- **Retention:** after a complete listing, header records and labels older than `retention_days` (default 180) are deleted, except inside any saved checkpoint's window.
 - **Resume:** `--resume` keeps the frozen window and lists the mailbox again from page one, because an old page token may be invalid. It reuses cached metadata and classifications, and removes messages that disappeared since the last run.
 - **Ctrl-C:** it arrives as a task cancellation. The run saves a partial report, and the MCP subprocess is shut down.
 - **Concurrent runs:** a lock file stops two runs (for example a scheduled briefing and a manual inventory) from sharing the caches at the same time.
@@ -55,8 +70,20 @@
 2. **Scan and classify:** the same scan and classification code, so only new mail is classified. The briefing uses its own checkpoint but shares the caches.
 3. **Select:** new `editorial_newsletter` issues, with optional include/exclude filters by publication name.
 4. **Summarize:** up to 6,000 characters per issue, 8 issues per call. Each bullet must cite a `source_message_id` from its own batch; otherwise it is dropped and counted. Links are removed from both the input and the output.
-5. **Save:** a dated HTML page, `latest.html`, and a counts-only macOS notification. The window moves forward only after a complete briefing, so a failure or budget stop never skips mail.
+5. **Save:** a dated HTML page, `latest.html`, and a counts-only desktop notification (macOS `osascript`, Linux `notify-send`; none on Windows). The window moves forward only after a complete briefing, so a failure or budget stop never skips mail.
 
 ## Testing
 
 `uv run pytest` runs entirely offline. The workflow tests use the **real** FastMCP server and protocol, connected in memory to `SyntheticGmail` (a stand-in for Google's client), and a fake OpenAI client. A few tests run the installed OpenAI SDK against a local `httpx.MockTransport` to check the exact request shapes.
+
+## Measuring quality
+
+`newsletter-agent eval` runs the real pipeline (MCP server, scan, triage, classification, validation) on 96 invented emails with known labels: 56 from the demo mailbox (at most 6 per sender) and 40 hand-written hard cases, such as receipts from newsletter senders, a friend writing through a newsletter platform, product updates that read like promotions, non-English issues, prompt-injection attempts, and HTML-only or empty bodies. `evals/build_dataset.py` regenerates the dataset.
+
+It reports:
+- **Subscription detection**, scored end to end: mail the privacy triage never sends to the model counts as "not a subscription".
+- **Per-category precision, recall and F1**, and a confusion matrix, over the emails that reached the model.
+- **Triage coverage:** how many real subscriptions reached the model, and how many personal emails were kept from it or sent as headers only.
+- **Publication-name accuracy, unresolved answers, and tokens per 1,000 emails.**
+
+Invented, missing or duplicate IDs count as unresolved and lower recall. A budget stop marks the result incomplete. `--real-model` refuses any dataset except the bundled synthetic one, so the eval can never send other email to OpenAI. CI runs the offline stand-in and fails if its scores drop. Results are in `evals/results/`.

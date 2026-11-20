@@ -15,7 +15,7 @@ def command_setup(args) -> int:
         copied = config.import_legacy_data(Path(args.import_legacy).expanduser())
         print(f"Imported {len(copied)} files into {config.app_home()} (existing files were not overwritten).")
     credentials = config.credentials_dir()
-    from .schedule import plist_path
+    from .schedule import is_scheduled
     from .store import latest_report_path
 
     checks = [
@@ -23,9 +23,13 @@ def command_setup(args) -> int:
         ("Google OAuth client", (credentials / "client_secret.json").exists(),
          f"save your Desktop OAuth client JSON as {credentials / 'client_secret.json'} (docs/setup-google.md)"),
         ("Gmail authorization", (credentials / "token.json").exists(), "run: newsletter-agent login"),
-        ("OpenAI API key", config.has_api_key(), f"set OPENAI_API_KEY or put OPENAI_API_KEY=... in {config.env_file()}"),
+        (
+            "OpenAI API key",
+            config.has_api_key(),
+            f"set OPENAI_API_KEY or put OPENAI_API_KEY=... in {config.env_file()}",
+        ),
         ("Inventory report", latest_report_path() is not None, "run: newsletter-agent inventory --preflight"),
-        ("Daily briefing schedule", plist_path().exists(), "optional: newsletter-agent schedule 07:00"),
+        ("Daily briefing schedule", is_scheduled(), "optional: newsletter-agent schedule 07:00"),
     ]
     for name, ok, hint in checks:
         print(f"  {'✓' if ok else '·'} {name}" + ("" if ok and name != "Data folder" else f": {hint}"))
@@ -110,6 +114,12 @@ def command_demo(args) -> int:
     return run_demo(args.output, args.real_model, args.open)
 
 
+def command_eval(args) -> int:
+    from .evaluate import run_eval_command
+
+    return run_eval_command(real_model=args.real_model, dataset=args.dataset, output=args.output, approved=args.yes)
+
+
 def command_mcp_server(args) -> int:
     from .gmail_server import run_gmail_server
 
@@ -138,7 +148,9 @@ def build_parser() -> argparse.ArgumentParser:
     inventory.add_argument("--preflight", action="store_true", help="Scan and estimate only; no OpenAI calls")
     inventory.add_argument("--max-messages", type=int, help="Stop after this many in-scope messages (partial)")
     inventory.add_argument("--resume", action="store_true", help="Continue the saved window, reusing finished work")
-    inventory.add_argument("--yes", action="store_true", help="Approve sending email content to OpenAI without a prompt")
+    inventory.add_argument(
+        "--yes", action="store_true", help="Approve sending email content to OpenAI without a prompt"
+    )
     inventory.add_argument("--max-model-calls", type=int, default=DEFAULT_MAX_MODEL_CALLS, help="Hard limit per run")
     inventory.add_argument("--max-tokens", type=int, default=DEFAULT_MAX_TOKENS, help="Hard limit per run")
     inventory.set_defaults(handler=command_inventory)
@@ -155,7 +167,7 @@ def build_parser() -> argparse.ArgumentParser:
     brief.add_argument("--scheduled", action="store_true", help=argparse.SUPPRESS)
     brief.set_defaults(handler=command_brief)
 
-    schedule = commands.add_parser("schedule", help="Run the briefing daily (macOS), e.g. schedule 07:00")
+    schedule = commands.add_parser("schedule", help="Run the briefing daily, e.g. schedule 07:00")
     schedule.add_argument("time", help="24-hour time, HH:MM")
     schedule.set_defaults(handler=command_schedule)
     commands.add_parser("unschedule", help="Remove the daily briefing").set_defaults(handler=command_unschedule)
@@ -166,12 +178,26 @@ def build_parser() -> argparse.ArgumentParser:
     demo.add_argument("--open", action="store_true", help="Open the demo report in your browser")
     demo.set_defaults(handler=command_demo)
 
+    evaluate = commands.add_parser("eval", help="Measure classification quality on labelled synthetic emails")
+    evaluate.add_argument("--real-model", action="store_true",
+                          help="Use the real model (your OpenAI key); only the bundled synthetic emails are sent")
+    evaluate.add_argument("--dataset", metavar="FILE",
+                          help="A JSONL dataset to score offline instead of the bundled one")
+    evaluate.add_argument("--output", metavar="DIR",
+                          help="Where to save the results (default ~/.newsletter-agent/evals)")
+    evaluate.add_argument("--yes", action="store_true", help="With --real-model: approve without a prompt")
+    evaluate.set_defaults(handler=command_eval)
+
     commands.add_parser("mcp-server", help="Run the Gmail MCP server (used internally)").set_defaults(
         handler=command_mcp_server)
     return parser
 
 
 def main(argv: list[str] | None = None) -> int:
+    for stream in (sys.stdout, sys.stderr):
+        # A Windows console may not encode every character in email subjects; never crash on one.
+        if hasattr(stream, "reconfigure") and (stream.encoding or "").lower().replace("-", "") != "utf8":
+            stream.reconfigure(errors="replace")
     args = build_parser().parse_args(argv)
     try:
         return args.handler(args)

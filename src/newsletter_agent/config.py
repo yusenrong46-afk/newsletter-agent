@@ -17,15 +17,19 @@ import shutil
 import sys
 import tempfile
 import tomllib
-from datetime import tzinfo
+from datetime import UTC, tzinfo
 from pathlib import Path
+from typing import Any
 from zoneinfo import ZoneInfo
 
 GMAIL_SCOPES = ["https://www.googleapis.com/auth/gmail.readonly"]
 MODEL = "gpt-6-luna"
 
-DEFAULT_CONFIG = {
+DEFAULT_CONFIG: dict[str, Any] = {
     "display_timezone": "",  # Empty means this computer's time zone.
+    # Header records and labels older than this are deleted from the cache, but never
+    # inside the window of a saved inventory or briefing.
+    "retention_days": 180,
     "briefing": {
         "time": "07:00",
         "categories": ["editorial_newsletter"],
@@ -90,11 +94,19 @@ def write_private_file(path: Path, text: str):
 
 def load_config() -> dict:
     """Read config.toml on top of the defaults. A missing file means all defaults."""
-    config = {"display_timezone": DEFAULT_CONFIG["display_timezone"], "briefing": dict(DEFAULT_CONFIG["briefing"])}
+    config: dict[str, Any] = {
+        "display_timezone": DEFAULT_CONFIG["display_timezone"],
+        "retention_days": DEFAULT_CONFIG["retention_days"],
+        "briefing": dict(DEFAULT_CONFIG["briefing"]),
+    }
     path = app_home() / "config.toml"
     if path.exists():
         saved = tomllib.loads(path.read_text(encoding="utf-8"))
         config["display_timezone"] = saved.get("display_timezone", config["display_timezone"])
+        retention = saved.get("retention_days", config["retention_days"])
+        if isinstance(retention, bool) or not isinstance(retention, int) or retention < 1:
+            raise ValueError(f"retention_days in {path} must be a whole number of days, at least 1.")
+        config["retention_days"] = retention
         config["briefing"].update(saved.get("briefing", {}))
     return config
 
@@ -111,7 +123,12 @@ def toml_value(value) -> str:
 
 
 def save_config(config: dict):
-    lines = [f"display_timezone = {toml_value(config['display_timezone'])}", "", "[briefing]"]
+    lines = [
+        f"display_timezone = {toml_value(config['display_timezone'])}",
+        f"retention_days = {toml_value(config.get('retention_days', DEFAULT_CONFIG['retention_days']))}",
+        "",
+        "[briefing]",
+    ]
     lines += [f"{key} = {toml_value(value)}" for key, value in config["briefing"].items()]
     private_dir()
     write_private_file(app_home() / "config.toml", "\n".join(lines) + "\n")
@@ -128,7 +145,7 @@ def display_zone() -> tzinfo:
             return ZoneInfo(name)
         except (ZoneInfoNotFoundError, ValueError):
             print(f"Warning: unknown display_timezone {name!r} in config.toml; using this computer's.", file=sys.stderr)
-    return datetime.now().astimezone().tzinfo
+    return datetime.now().astimezone().tzinfo or UTC
 
 
 # --- OpenAI key -------------------------------------------------------------
@@ -148,7 +165,7 @@ def get_api_key() -> str:
         return key
     path = env_file()
     if path.exists():
-        for line in path.read_text().splitlines():
+        for line in path.read_text(encoding="utf-8").splitlines():
             name, separator, value = line.partition("=")
             if separator and name.strip() == "OPENAI_API_KEY":
                 return value.strip().strip("\"'")
@@ -186,5 +203,5 @@ def import_legacy_data(project_dir: Path) -> list[str]:
         destination.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
         shutil.copyfile(source, destination)
         os.chmod(destination, 0o600)
-        copied.append(str(destination.relative_to(app_home())))
+        copied.append(destination.relative_to(app_home()).as_posix())
     return copied

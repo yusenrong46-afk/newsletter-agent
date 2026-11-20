@@ -2,13 +2,13 @@
 
 import asyncio
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from newsletter_agent import classify, demo
-from newsletter_agent.cli import main
 from newsletter_agent.classify import ClassificationBatch
+from newsletter_agent.cli import main
 
-NOW = datetime(2026, 11, 6, 12, 0, tzinfo=timezone.utc)
+NOW = datetime(2026, 11, 6, 12, 0, tzinfo=UTC)
 
 
 class RecordingModel(demo.OfflineModel):
@@ -50,7 +50,7 @@ def test_demo_writes_a_labelled_site(tmp_path):
     (tmp_path / "site").mkdir()
     run(tmp_path)
     for name in ("index.html", "briefing.html"):
-        html = (tmp_path / "site" / name).read_text()
+        html = (tmp_path / "site" / name).read_text(encoding="utf-8")
         assert "DEMO DATA" in html and "Content-Security-Policy" in html
 
 

@@ -7,7 +7,9 @@ demo module) and OpenAI (FakeOpenAI below). No test contacts Gmail or OpenAI.
 
 import asyncio
 import json
-from datetime import datetime, timezone
+import threading
+import time
+from datetime import UTC, datetime
 from types import SimpleNamespace
 
 from mcp.shared.memory import create_connected_server_and_client_session
@@ -21,7 +23,7 @@ from newsletter_agent.inventory import run_inventory
 from newsletter_agent.scan import InventoryOptions
 from newsletter_agent.store import InventoryStore
 
-NOW = datetime(2026, 6, 1, 12, 0, tzinfo=timezone.utc)
+NOW = datetime(2026, 6, 1, 12, 0, tzinfo=UTC)
 NOW_MS = int(NOW.timestamp() * 1000)
 DAY_MS = 86_400_000
 WINDOW_START_MS = NOW_MS - 90 * DAY_MS
@@ -39,6 +41,35 @@ def newsletter(message_id, list_id="weekly.example.com", **kwargs):
 
 def many_newsletters(count):
     return [newsletter(f"m{i:03}") for i in range(count)]
+
+
+class SlowGmail(SyntheticGmail):
+    """SyntheticGmail with a delay per message read; records how many reads overlap."""
+
+    def __init__(self, messages=(), latency=0.005, page_size=2, pages=None):
+        super().__init__(messages, pages=pages, page_size=page_size)
+        self.latency = latency
+        self.in_flight = 0
+        self.peak_in_flight = 0
+        self._lock = threading.Lock()
+
+    def get(self, userId, id, format, metadataHeaders=None):
+        request = super().get(userId, id, format, metadataHeaders)
+        inner = request.action
+
+        def action():
+            with self._lock:
+                self.in_flight += 1
+                self.peak_in_flight = max(self.peak_in_flight, self.in_flight)
+            try:
+                time.sleep(self.latency)
+                return inner()
+            finally:
+                with self._lock:
+                    self.in_flight -= 1
+
+        request.action = action
+        return request
 
 
 def fake_gmail(messages=(), pages=None):
@@ -114,7 +145,10 @@ def run_workflow(tmp_path, google, fake_openai=None, confirm=lambda preflight: T
             return await run_inventory(gmail, InventoryOptions(**options), store,
                                        openai_factory=lambda: fake_openai, confirm=confirm, now=now)
 
-    return asyncio.run(go()), fake_openai
+    try:
+        return asyncio.run(go()), fake_openai
+    finally:
+        store.close()  # Windows cannot delete or replace a database file that is still open.
 
 
 def all_groups(report):

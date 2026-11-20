@@ -1,0 +1,170 @@
+{
+ "label": "gpt-6-luna",
+ "model": "gpt-6-luna",
+ "generated_at": "2026-11-19T21:16:39+00:00",
+ "dataset": {
+  "cases": 96,
+  "by_label": {
+   "editorial_newsletter": 38,
+   "product_update": 11,
+   "transactional": 20,
+   "promotional_subscription": 20,
+   "personal_or_other": 7
+  },
+  "by_source": {
+   "demo": 56,
+   "hard": 40
+  }
+ },
+ "status": "complete",
+ "complete": true,
+ "cases": 96,
+ "subscription_detection": {
+  "true_positive": 69,
+  "false_positive": 0,
+  "false_negative": 0,
+  "true_negative": 27,
+  "precision": 1.0,
+  "recall": 1.0,
+  "f1": 1.0,
+  "accuracy": 1.0
+ },
+ "category_accuracy": 1.0,
+ "macro_f1": 1.0,
+ "per_category": {
+  "editorial_newsletter": {
+   "support": 38,
+   "predicted": 38,
+   "precision": 1.0,
+   "recall": 1.0,
+   "f1": 1.0
+  },
+  "promotional_subscription": {
+   "support": 20,
+   "predicted": 20,
+   "precision": 1.0,
+   "recall": 1.0,
+   "f1": 1.0
+  },
+  "product_update": {
+   "support": 11,
+   "predicted": 11,
+   "precision": 1.0,
+   "recall": 1.0,
+   "f1": 1.0
+  },
+  "transactional": {
+   "support": 20,
+   "predicted": 20,
+   "precision": 1.0,
+   "recall": 1.0,
+   "f1": 1.0
+  },
+  "personal_or_other": {
+   "support": 4,
+   "predicted": 4,
+   "precision": 1.0,
+   "recall": 1.0,
+   "f1": 1.0
+  },
+  "uncertain": {
+   "support": 0,
+   "predicted": 0,
+   "precision": null,
+   "recall": null,
+   "f1": null
+  }
+ },
+ "confusion": {
+  "editorial_newsletter": {
+   "editorial_newsletter": 38,
+   "promotional_subscription": 0,
+   "product_update": 0,
+   "transactional": 0,
+   "personal_or_other": 0,
+   "uncertain": 0,
+   "unresolved": 0,
+   "pending": 0,
+   "not_sent": 0
+  },
+  "promotional_subscription": {
+   "editorial_newsletter": 0,
+   "promotional_subscription": 20,
+   "product_update": 0,
+   "transactional": 0,
+   "personal_or_other": 0,
+   "uncertain": 0,
+   "unresolved": 0,
+   "pending": 0,
+   "not_sent": 0
+  },
+  "product_update": {
+   "editorial_newsletter": 0,
+   "promotional_subscription": 0,
+   "product_update": 11,
+   "transactional": 0,
+   "personal_or_other": 0,
+   "uncertain": 0,
+   "unresolved": 0,
+   "pending": 0,
+   "not_sent": 0
+  },
+  "transactional": {
+   "editorial_newsletter": 0,
+   "promotional_subscription": 0,
+   "product_update": 0,
+   "transactional": 20,
+   "personal_or_other": 0,
+   "uncertain": 0,
+   "unresolved": 0,
+   "pending": 0,
+   "not_sent": 0
+  },
+  "personal_or_other": {
+   "editorial_newsletter": 0,
+   "promotional_subscription": 0,
+   "product_update": 0,
+   "transactional": 0,
+   "personal_or_other": 4,
+   "uncertain": 0,
+   "unresolved": 0,
+   "pending": 0,
+   "not_sent": 3
+  },
+  "uncertain": {
+   "editorial_newsletter": 0,
+   "promotional_subscription": 0,
+   "product_update": 0,
+   "transactional": 0,
+   "personal_or_other": 0,
+   "uncertain": 0,
+   "unresolved": 0,
+   "pending": 0,
+   "not_sent": 0
+  }
+ },
+ "triage": {
+  "tiers": {
+   "bulk": 87,
+   "not_candidate": 3,
+   "recurring": 6
+  },
+  "subscriptions_reaching_model": 1.0,
+  "personal_kept_from_model_or_headers_only": 0.8571
+ },
+ "unresolved_rate": 0.0,
+ "publication_name_accuracy": 1.0,
+ "mistakes": [],
+ "usage": {
+  "model_calls": 4,
+  "input_tokens": 10463,
+  "output_tokens": 3978,
+  "total_tokens": 14441,
+  "tokens_per_1000_emails": 150427
+ },
+ "ship_bar": {
+  "metric": "subscription_detection.f1",
+  "minimum": 0.9,
+  "met": true
+ }
+}

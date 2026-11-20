@@ -11,13 +11,13 @@ re-bills) every message.
 import json
 import sys
 from collections import Counter
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Any, Literal, Protocol
 
 from openai import AsyncOpenAI, OpenAIError
 from pydantic import BaseModel, ConfigDict, ValidationError
 
 from . import config
-from .gmail_client import EXCERPT_CHARS, GmailMcpClient, GmailToolError, clean_text, remove_links
+from .gmail_client import EXCERPT_CHARS, GmailMcpClient, GmailToolError, clean_text, gather_in_order, remove_links
 from .scan import progress
 
 if TYPE_CHECKING:
@@ -35,14 +35,27 @@ SUBSCRIPTION_CATEGORIES = ("editorial_newsletter", "promotional_subscription", "
 ALL_CATEGORIES = SUBSCRIPTION_CATEGORIES + ("transactional", "personal_or_other", "uncertain")
 
 
+Category = Literal[
+    "editorial_newsletter", "promotional_subscription", "product_update",
+    "transactional", "personal_or_other", "uncertain",
+]
+
+
+class ModelClient(Protocol):
+    """The part of the OpenAI client this app uses: `client.responses.parse(...)`.
+
+    The real AsyncOpenAI client, the demo's OfflineModel and the test fakes all fit.
+    """
+
+    @property
+    def responses(self) -> Any: ...
+
+
 class MessageClassification(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     message_id: str
-    classification: Literal[
-        "editorial_newsletter", "promotional_subscription", "product_update",
-        "transactional", "personal_or_other", "uncertain",
-    ]
+    classification: Category
     publication_name: str | None
     confidence: Literal["high", "medium", "low"]
     rationale: str
@@ -72,7 +85,7 @@ publication_name: the newsletter or brand name shown by the evidence, otherwise 
 confidence: how strongly the evidence supports the classification.
 rationale: under 25 words, citing only what is in the input.
 
-body_status explains how much body text you can see: "available" is complete, "truncated" is partial, "unavailable" could not be read, and "withheld" was deliberately not sent. Missing text is not evidence of anything; use uncertain or low confidence when headers are not enough. A List-ID shows a mailing list exists, not that the content is editorial."""
+body_status explains how much body text you can see: "available" is complete, "truncated" is partial, "unavailable" could not be read, and "withheld" was deliberately not sent. Missing text is not evidence of anything; use uncertain or low confidence when headers are not enough. A List-ID shows a mailing list exists, not that the content is editorial."""  # noqa: E501
 
 
 def classification_cache_key(message_id: str, policy: str) -> str:
@@ -117,7 +130,9 @@ def plan_classification(run: "InventoryRun", records: list[dict], triage: dict[s
     return pending
 
 
-def build_preflight(run: "InventoryRun", records: list[dict], triage: dict[str, str], pending: list[tuple[dict, str]]) -> dict:
+def build_preflight(
+    run: "InventoryRun", records: list[dict], triage: dict[str, str], pending: list[tuple[dict, str]]
+) -> dict:
     """Work out the expected classification work. This makes no OpenAI call."""
     estimated_input = 0
     for record, policy in pending:
@@ -150,7 +165,8 @@ def build_preflight(run: "InventoryRun", records: list[dict], triage: dict[str, 
         "assumptions": (
             f"Tokens are estimated at about 4 bytes each, with each body counted as the smaller of "
             f"{EXCERPT_CHARS} characters and Gmail's message size. Batches hold {BATCH_SIZE} messages. "
-            f"Output is the reserved maximum of {MAX_OUTPUT_TOKENS_PER_BATCH} tokens per batch; real output is usually lower."
+            f"Output is the reserved maximum of {MAX_OUTPUT_TOKENS_PER_BATCH} tokens per batch; "
+            "real output is usually lower."
         ),
     }
 
@@ -199,7 +215,9 @@ def validate_batch(expected_ids: list[str], batch: ClassificationBatch) -> tuple
     return results, unresolved, fabricated
 
 
-async def request_classification(run: "InventoryRun", openai_client, message_ids: list[str], payload: str, estimate: int):
+async def request_classification(
+    run: "InventoryRun", openai_client, message_ids: list[str], payload: str, estimate: int
+):
     """Make one model call. Returns (results, unresolved). OpenAI errors propagate."""
     run.model_calls_this_run += 1
     run.state.usage_total["model_calls"] += 1
@@ -232,22 +250,25 @@ async def request_classification(run: "InventoryRun", openai_client, message_ids
     return results, unresolved
 
 
-async def read_batch_items(run: "InventoryRun", gmail: GmailMcpClient, batch: list[tuple[dict, str]]) -> list[tuple[dict, str, dict]]:
-    """Fetch body excerpts where allowed. Bodies stay in memory and are never saved."""
-    items = []
-    for record, policy in batch:
+async def read_batch_items(
+    run: "InventoryRun", gmail: GmailMcpClient, batch: list[tuple[dict, str]]
+) -> list[tuple[dict, str, dict]]:
+    """Fetch body excerpts where allowed, in parallel. Bodies stay in memory and are never saved."""
+
+    async def read_one(entry: tuple[dict, str]) -> tuple[dict, str, dict] | None:
+        record, policy = entry
         if policy == "withheld":
-            items.append((record, policy, build_classifier_item(record, "withheld", "")))
-            continue
+            return record, policy, build_classifier_item(record, "withheld", "")
         try:
             raw = await gmail.read_body(record["id"], EXCERPT_CHARS)
         except GmailToolError as error:
             if error.code != "not_found":
                 raise
             run.state.unavailable[record["id"]] = "not_found"
-            continue
-        items.append((record, policy, build_classifier_item(record, raw["body_status"], raw.get("body", ""))))
-    return items
+            return None
+        return record, policy, build_classifier_item(record, raw["body_status"], raw.get("body", ""))
+
+    return [item for item in await gather_in_order(batch, read_one) if item is not None]
 
 
 def store_classification(run: "InventoryRun", record: dict, policy: str, item: dict, result: MessageClassification):
@@ -323,7 +344,10 @@ def confirm_paid_run(preflight: dict) -> bool:
         print("Not interactive: re-run with --yes to approve sending this content to OpenAI.")
         return False
     try:
-        answer = input(f"Send {preflight['messages_to_classify']} messages to OpenAI ({MODEL}) for classification? [y/N, Enter cancels] ")
+        answer = input(
+            f"Send {preflight['messages_to_classify']} messages to OpenAI ({MODEL}) for classification? "
+            "[y/N, Enter cancels] "
+        )
     except (EOFError, KeyboardInterrupt):
         return False
     return answer.strip().lower() in ("y", "yes")
