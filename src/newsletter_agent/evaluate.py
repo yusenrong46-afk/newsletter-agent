@@ -18,12 +18,22 @@ validation) on invented emails with known answers, then scores it:
   many true bullets it wrongly removes, and how well the editor groups bullets
   that report the same story.
 
+Two bundled sets are scored: "standard" (clear-cut emails) and "hard" (mixed
+purposes, misleading subjects, missing headers, borderline cases). A hard case
+may list other labels a careful person could give; the eval then reports
+strict accuracy (the expected label only) and lenient accuracy (either).
+
+--runs N repeats everything N times, because a model does not give the same
+answers every time. The result then shows the mean and the range, and names
+the emails whose answer changed between runs.
+
 No real email is involved: the mailbox is SyntheticGmail, and --real-model
 refuses any dataset except the bundled one.
 """
 
 import asyncio
 import json
+import statistics
 import sys
 import tempfile
 from collections import Counter
@@ -51,19 +61,21 @@ SHIP_BAR_SUBSCRIPTION_F1 = 0.90
 REQUIRED_KEYS = ("id", "from", "subject", "expected", "days_ago")
 TEAM_MAX_MODEL_CALLS = 10
 TEAM_MAX_TOKENS = 150_000
+MAX_RUNS = 10
+BUNDLED_SETS = {"standard": "dataset.jsonl", "hard": "dataset_hard.jsonl"}
 
 
 class DatasetError(ValueError):
     pass
 
 
-def bundled_dataset_text() -> str:
-    return (resources.files("newsletter_agent") / "eval_data" / "dataset.jsonl").read_text(encoding="utf-8")
+def bundled_dataset_text(name: str = "standard") -> str:
+    return (resources.files("newsletter_agent") / "eval_data" / BUNDLED_SETS[name]).read_text(encoding="utf-8")
 
 
-def load_dataset(path: Path | None = None) -> list[dict]:
-    """Read and validate a JSONL dataset. Without a path, the bundled synthetic one."""
-    text = path.read_text(encoding="utf-8") if path else bundled_dataset_text()
+def load_dataset(path: Path | None = None, name: str = "standard") -> list[dict]:
+    """Read and validate a JSONL dataset. Without a path, one of the bundled synthetic sets."""
+    text = path.read_text(encoding="utf-8") if path else bundled_dataset_text(name)
     cases, seen = [], set()
     for number, line in enumerate(text.splitlines(), start=1):
         if not line.strip():
@@ -78,6 +90,12 @@ def load_dataset(path: Path | None = None) -> list[dict]:
         if item["expected"] not in ALL_CATEGORIES:
             raise DatasetError(f"Line {number}: unknown label {item['expected']!r}. "
                                f"Use one of {', '.join(ALL_CATEGORIES)}.")
+        also = item.get("also_acceptable", [])
+        if not isinstance(also, list) or any(label not in ALL_CATEGORIES for label in also):
+            raise DatasetError(f"Line {number}: also_acceptable must be a list of labels from "
+                               f"{', '.join(ALL_CATEGORIES)}.")
+        if item["expected"] in also:
+            raise DatasetError(f"Line {number}: also_acceptable repeats the expected label {item['expected']!r}.")
         if item["id"] in seen:
             raise DatasetError(f"Line {number}: duplicate id {item['id']!r}.")
         if not 0 <= float(item["days_ago"]) < 89:
@@ -151,6 +169,11 @@ def f1(precision: float | None, recall: float | None) -> float | None:
     return round(2 * precision * recall / (precision + recall), 4)
 
 
+def is_acceptable(item: dict, answer: str) -> bool:
+    """The expected label, or another label the dataset says a careful person could give."""
+    return answer == item["expected"] or answer in item.get("also_acceptable", [])
+
+
 def score(cases: list[dict], outcome: dict[str, str], triage: dict[str, str],
           names: dict[str, str | None] | None = None) -> dict:
     """Every number here is plain arithmetic over expected vs. predicted labels."""
@@ -174,6 +197,7 @@ def score(cases: list[dict], outcome: dict[str, str], triage: dict[str, str],
 
     reached_model = [item for item in cases if outcome[item["id"]] != "not_sent"]
     correct = sum(1 for item in reached_model if outcome[item["id"]] == item["expected"])
+    lenient = sum(1 for item in reached_model if is_acceptable(item, outcome[item["id"]]))
 
     counts: Counter[tuple[bool, bool]] = Counter()
     for item in cases:
@@ -191,7 +215,9 @@ def score(cases: list[dict], outcome: dict[str, str], triage: dict[str, str],
 
     mistakes = [
         {"id": item["id"], "subject": item["subject"], "expected": item["expected"],
-         "predicted": outcome[item["id"]], "note": item.get("note", "")}
+         "predicted": outcome[item["id"]], "note": item.get("note", ""),
+         # True when the answer is not the expected label but is one a careful person could give.
+         "acceptable": is_acceptable(item, outcome[item["id"]])}
         for item in cases if outcome[item["id"]] != item["expected"]
         and not (outcome[item["id"]] == "not_sent" and item["expected"] == "personal_or_other")
     ]
@@ -203,6 +229,7 @@ def score(cases: list[dict], outcome: dict[str, str], triage: dict[str, str],
             "accuracy": ratio(tp + tn, len(cases)),
         },
         "category_accuracy": ratio(correct, len(reached_model)),
+        "lenient_category_accuracy": ratio(lenient, len(reached_model)),
         "macro_f1": round(sum(scored) / len(scored), 4) if scored else None,  # type: ignore[arg-type]
         "per_category": per_category,
         "confusion": confusion,
@@ -217,6 +244,8 @@ def score(cases: list[dict], outcome: dict[str, str], triage: dict[str, str],
                                  len(reached_model)),
         "publication_name_accuracy": ratio(name_matches, len(named)),
         "mistakes": mistakes,
+        "clear_mistakes": sum(1 for mistake in mistakes if not mistake["acceptable"]),
+        "answers": {item["id"]: outcome[item["id"]] for item in cases},
     }
 
 
@@ -245,6 +274,67 @@ def run_eval(cases: list[dict], model_factory: Callable[[], ModelClient], label:
     f1_value = result["subscription_detection"]["f1"]
     result["ship_bar"]["met"] = bool(f1_value is not None and f1_value >= SHIP_BAR_SUBSCRIPTION_F1)
     return result
+
+
+# --- Repeated runs --------------------------------------------------------------------------
+
+def spread(values: list) -> dict | None:
+    """Mean, lowest and highest of the values that exist (None means a run had nothing to score)."""
+    numbers = [value for value in values if value is not None]
+    if not numbers:
+        return None
+    return {"mean": round(statistics.fmean(numbers), 4), "min": min(numbers), "max": max(numbers),
+            "values": numbers}
+
+
+def aggregate_runs(cases: list[dict], results: list[dict]) -> dict:
+    """Summarize several runs on the same emails: ranges, and which emails changed answer."""
+    flaky, always_wrong, always_right = [], [], 0
+    for item in cases:
+        answers = Counter(result["answers"][item["id"]] for result in results)
+        if set(answers) == {"not_sent"} and item["expected"] == "personal_or_other":
+            always_right += 1  # Kept from the model, which is the right outcome for personal mail.
+            continue
+        right = sum(count for answer, count in answers.items() if is_acceptable(item, answer))
+        entry = {"id": item["id"], "subject": item["subject"], "expected": item["expected"],
+                 "also_acceptable": item.get("also_acceptable", []), "answers": dict(answers),
+                 "acceptable_runs": right, "note": item.get("note", "")}
+        if len(answers) > 1:
+            flaky.append(entry)  # The model gave different answers on different runs.
+        if right == 0:
+            always_wrong.append(entry)  # Possibly in both lists: wrong every time, in different ways.
+        elif len(answers) == 1:
+            always_right += 1
+    return {
+        "runs": len(results), "complete_runs": sum(1 for result in results if result["complete"]),
+        "cases": len(cases),
+        "category_accuracy": spread([result["category_accuracy"] for result in results]),
+        "lenient_category_accuracy": spread([result["lenient_category_accuracy"] for result in results]),
+        "subscription_f1": spread([result["subscription_detection"]["f1"] for result in results]),
+        "macro_f1": spread([result["macro_f1"] for result in results]),
+        "unresolved_rate": spread([result["unresolved_rate"] for result in results]),
+        "subscriptions_reaching_model": results[0]["triage"]["subscriptions_reaching_model"],
+        "total_tokens": sum(result["usage"]["total_tokens"] for result in results),
+        "stable_right": always_right, "always_wrong": always_wrong, "changed_between_runs": flaky,
+    }
+
+
+def aggregate_team(teams: list[dict]) -> dict:
+    return {
+        "runs": len(teams),
+        "complete_runs": sum(1 for team in teams
+                             if team["fact_check"]["status"] == team["editor"]["status"] == "done"),
+        "catch_rate": spread([team["fact_check"]["catch_rate"] for team in teams]),
+        "wrongly_removed_rate": spread([team["fact_check"]["wrongly_removed_rate"] for team in teams]),
+        "grouping_f1": spread([team["editor"]["f1"] for team in teams]),
+        "total_tokens": sum(team["usage"]["total_tokens"] for team in teams),
+    }
+
+
+def estimate_run_tokens(cases: list[dict]) -> int:
+    """A rough upper estimate of one classification run, for the approval question."""
+    text = sum(len((item.get("body") or item.get("html") or "")[:2000]) + len(item["subject"]) + 200 for item in cases)
+    return text // 4 + 80 * len(cases) + 600 * (len(cases) // 25 + 1)
 
 
 # --- The briefing team ------------------------------------------------------------------
@@ -361,6 +451,15 @@ def run_team_eval(model_factory: Callable[[], ModelClient], max_model_calls: int
 
 # --- Output -----------------------------------------------------------------------
 
+def range_text(values: dict | None) -> str:
+    """'97.9% (95.7%–100.0%)': the mean, then the lowest and highest run."""
+    if not values:
+        return "n/a"
+    if values["min"] == values["max"]:
+        return percent(values["mean"])
+    return f"{percent(values['mean'])} ({percent(values['min'])}–{percent(values['max'])})"
+
+
 def percent(value: float | None) -> str:
     return "n/a" if value is None else f"{value * 100:.1f}%"
 
@@ -390,6 +489,7 @@ def render_eval_html(result: dict) -> str:
     bar = result["ship_bar"]
     body = f"""
 <h1>Classification quality</h1>
+{incomplete_warning(result)}
 <p class="muted">{escape(result['model'])} · {result['cases']} synthetic emails · status {escape(result['status'])}
 · ship bar: subscription F1 ≥ {percent(bar['minimum'])} ({'met' if bar['met'] else 'not met'})</p>
 <div class="cards">
@@ -407,11 +507,83 @@ def render_eval_html(result: dict) -> str:
 <div class="table-wrap"><table><thead><tr><th>True label</th>{header}</tr></thead><tbody>{rows}</tbody></table></div>
 <h2>Mistakes</h2>
 <ul class="notes">{mistakes}</ul>
+{render_hard_html(result.get('hard'))}
 {render_team_html(result.get('briefing_team'))}
+{render_repeated_html(result.get('repeated'), result)}
 <p class="muted small">"Not sent" means the privacy triage kept the email from the model. For personal email that is
 the right outcome and is not counted as a mistake.</p>
 """
     return page("Classification quality", body)
+
+
+def render_hard_html(hard: dict | None) -> str:
+    if not hard:
+        return ""
+    clear = [mistake for mistake in hard["mistakes"] if not mistake["acceptable"]]
+    rows = "".join(
+        f"<li>{escape(item['subject'] or '(no subject)')}: expected {escape(CATEGORY_LABELS[item['expected']])}, got "
+        f"{escape(CATEGORY_LABELS.get(item['predicted'], item['predicted'].replace('_', ' ')))}"
+        f"{' · ' + escape(item['note']) if item['note'] else ''}</li>" for item in clear) or "<li>None.</li>"
+    return f"""
+<h2>Hard set</h2>
+<div class="cards">
+  {card(percent(hard['category_accuracy']), 'category accuracy, expected label only')}
+  {card(percent(hard['lenient_category_accuracy']), 'counting acceptable alternatives')}
+  {card(percent(hard['subscription_detection']['f1']), 'subscription detection F1')}
+  {card(percent(hard['triage']['subscriptions_reaching_model']), 'subscriptions reaching the model')}
+  {card(hard['clear_mistakes'], 'clear mistakes')}
+</div>
+<p class="muted small">{hard['cases']} invented emails chosen to be difficult: mixed purposes, misleading subjects,
+missing headers, and borderline cases. Where a careful person could give another label, that label also counts in
+the lenient score. A real newsletter that the privacy rules never send to the model is counted as a clear mistake.</p>
+<h2>Clear mistakes on the hard set (this run)</h2>
+<ul class="notes">{rows}</ul>
+"""
+
+
+def incomplete_warning(result: dict) -> str:
+    """A visible warning when any part of the eval did not finish, so partial numbers never look final."""
+    if result.get("complete", True):
+        return ""
+    reason = result.get("incomplete_reason", "Some part of this eval did not finish.")
+    return (f'<p><span class="badge warn">Incomplete</span> <strong>{escape(reason)}</strong> '
+            "Treat the numbers on this page as partial.</p>")
+
+
+def render_repeated_html(repeated: dict | None, result: dict | None = None) -> str:
+    if not repeated or repeated["runs"] < 2:
+        return ""
+    rows = "".join(
+        f"<tr><td>{escape(name)}</td><td class=\"num\">{summary['complete_runs']} of {summary['runs']} runs</td>"
+        f"<td class=\"num\">{summary['cases']}</td>"
+        f"<td class=\"num\">{range_text(summary['category_accuracy'])}</td>"
+        f"<td class=\"num\">{range_text(summary['lenient_category_accuracy'])}</td>"
+        f"<td class=\"num\">{range_text(summary['subscription_f1'])}</td>"
+        f"<td class=\"num\">{len(summary['changed_between_runs'])}</td>"
+        f"<td class=\"num\">{len(summary['always_wrong'])}</td></tr>"
+        for name, summary in repeated["sets"].items())
+    changed = "".join(
+        f"<li>{escape(entry['subject'] or '(no subject)')} ({escape(name)} set): expected "
+        f"{escape(CATEGORY_LABELS[entry['expected']])}; answers "
+        + escape(", ".join(f"{answer.replace('_', ' ')} ×{count}"
+                           for answer, count in sorted(entry["answers"].items())))
+        + "</li>"
+        for name, summary in repeated["sets"].items() for entry in summary["changed_between_runs"]) or "<li>None.</li>"
+    team = repeated["briefing_team"]
+    return f"""
+<h2>Repeated runs ({repeated['runs']} runs)</h2>
+{incomplete_warning(result or {})}
+<p class="muted small">A model does not give the same answers every time. Each figure is the mean over
+{repeated['runs']} runs, with the lowest and highest run in brackets.</p>
+<div class="table-wrap"><table><thead><tr><th>Set</th><th class="num">Finished</th>
+<th class="num">Emails</th><th class="num">Category accuracy</th>
+<th class="num">Lenient</th><th class="num">Subscription F1</th><th class="num">Changed answer</th>
+<th class="num">Always wrong</th></tr></thead><tbody>{rows}</tbody></table></div>
+<p class="muted small">Briefing team: planted errors caught {range_text(team['catch_rate'])}; true bullets wrongly
+removed {range_text(team['wrongly_removed_rate'])}; same-story grouping F1 {range_text(team['grouping_f1'])}.</p>
+<h2>Emails whose answer changed between runs</h2>
+<ul class="notes">{changed}</ul>
+"""
 
 
 def render_team_html(team: dict | None) -> str:
@@ -452,6 +624,13 @@ def summary_lines(result: dict) -> list[str]:
         f"Ship bar (subscription F1 ≥ {percent(result['ship_bar']['minimum'])}): "
         f"{'met' if result['ship_bar']['met'] else 'NOT met'}",
     ]
+    hard = result.get("hard")
+    if hard:
+        lines.append(
+            f"Hard set ({hard['cases']} emails): category accuracy {percent(hard['category_accuracy'])} strict, "
+            f"{percent(hard['lenient_category_accuracy'])} counting acceptable alternatives; subscription F1 "
+            f"{percent(hard['subscription_detection']['f1'])}; "
+            f"{percent(hard['triage']['subscriptions_reaching_model'])} of subscriptions reach the model")
     team = result.get("briefing_team")
     if team:
         check, editor = team["fact_check"], team["editor"]
@@ -465,6 +644,20 @@ def summary_lines(result: dict) -> list[str]:
             f"(precision {percent(editor['precision'])}, "
             f"recall {percent(editor['recall'])}); {editor['shared_stories_found_exactly']} of "
             f"{editor['shared_stories']} shared stories grouped exactly")
+    repeated = result.get("repeated")
+    if repeated and repeated["runs"] > 1:
+        for name, summary in repeated["sets"].items():
+            lines.append(
+                f"Over {repeated['runs']} runs, {name} set: category accuracy "
+                f"{range_text(summary['category_accuracy'])}"
+                f" strict, {range_text(summary['lenient_category_accuracy'])} lenient; subscription F1 "
+                f"{range_text(summary['subscription_f1'])}; {len(summary['changed_between_runs'])} of "
+                f"{summary['cases']} emails changed answer between runs, {len(summary['always_wrong'])} always wrong")
+        team_summary = repeated["briefing_team"]
+        lines.append(
+            f"Over {repeated['runs']} runs, briefing team: errors caught {range_text(team_summary['catch_rate'])}; "
+            f"true bullets wrongly removed {range_text(team_summary['wrongly_removed_rate'])}; grouping F1 "
+            f"{range_text(team_summary['grouping_f1'])}")
     if not result["complete"]:
         lines.append(f"Incomplete: {result['incomplete_reason']}")
     return lines
@@ -472,7 +665,9 @@ def summary_lines(result: dict) -> list[str]:
 
 def save_result(result: dict, directory: Path) -> list[Path]:
     directory.mkdir(parents=True, exist_ok=True)
-    stem = f"{result['label']}-{result['generated_at'][:10]}"
+    runs = result.get("repeated", {}).get("runs", 1)
+    # A multi-run result gets its own name, so it never replaces a single run saved the same day.
+    stem = f"{result['label']}-{result['generated_at'][:10]}" + (f"-{runs}runs" if runs > 1 else "")
     json_path, html_path = directory / f"{stem}.json", directory / f"{stem}.html"
     config.write_private_file(json_path, json.dumps(result, ensure_ascii=False, indent=1) + "\n")
     config.write_private_file(html_path, render_eval_html(result))
@@ -480,37 +675,69 @@ def save_result(result: dict, directory: Path) -> list[Path]:
 
 
 def run_eval_command(real_model: bool = False, dataset: str | None = None, output: str | None = None,
-                     approved: bool = False) -> int:
+                     approved: bool = False, runs: int = 1) -> int:
     if real_model and dataset:
         raise ValueError("The real-model eval only runs on the bundled synthetic dataset, "
                          "so no other email can be sent to OpenAI. Drop --dataset or --real-model.")
-    cases = load_dataset(Path(dataset) if dataset else None)
+    if not 1 <= runs <= MAX_RUNS:
+        raise ValueError(f"--runs must be between 1 and {MAX_RUNS}.")
+    if dataset:
+        sets = {"custom": load_dataset(Path(dataset))}
+    else:
+        sets = {name: load_dataset(name=name) for name in BUNDLED_SETS}
     directory = Path(output) if output else config.private_dir("evals")
+
+    model_factory: Callable[[], ModelClient]
     if real_model:
         from .briefing import ask_yes_no
         from .classify import make_openai_client
 
-        def confirm(preflight: dict) -> bool:
-            return ask_yes_no(
-                f"Send {preflight['messages_to_classify']} invented emails to OpenAI ({MODEL}) for the eval, "
-                f"then about 10 short invented issues for the briefing-team eval? "
-                f"At most {preflight['estimated_maximum_total_tokens']:,} tokens for the first part; hard limits "
-                f"{EVAL_MAX_MODEL_CALLS} calls / {EVAL_MAX_TOKENS:,} tokens, then {TEAM_MAX_MODEL_CALLS} calls / "
-                f"{TEAM_MAX_TOKENS:,} tokens.")
-
-        result = run_eval(cases, make_openai_client, MODEL, approved=approved, confirm=confirm)
-        if result["status"] == "awaiting_approval":
+        estimate = runs * (sum(estimate_run_tokens(cases) for cases in sets.values()) + 5_000)
+        ceiling = runs * (len(sets) * EVAL_MAX_TOKENS + TEAM_MAX_TOKENS)
+        question = (
+            f"Send the bundled invented emails to OpenAI ({MODEL}): {runs} run(s) of "
+            f"{' + '.join(str(len(cases)) for cases in sets.values())} emails plus the briefing-team cases? "
+            f"Roughly {estimate:,} tokens in total; hard limit {ceiling:,}.")
+        if not approved and not ask_yes_no(question):
             # Nothing was sent, so there is nothing to score or save (and no earlier result to overwrite).
             if sys.stdin.isatty():
                 print("Cancelled. Nothing was sent to OpenAI and no result was saved.")
                 return 0
             print("Not interactive: re-run with --yes to approve sending the synthetic emails to OpenAI.")
             return 2
-        attach_team(result, run_team_eval(make_openai_client))
+        model_factory, label = make_openai_client, MODEL
     else:
         model = OfflineModel()
-        result = run_eval(cases, lambda: model, "offline")
-        attach_team(result, run_team_eval(lambda: model))
+        model_factory, label = (lambda: model), "offline"
+
+    per_set: dict[str, list[dict]] = {name: [] for name in sets}
+    teams = []
+    for number in range(1, runs + 1):
+        if runs > 1:
+            print(f"Run {number} of {runs}", file=sys.stderr)
+        for name, cases in sets.items():
+            per_set[name].append(run_eval(cases, model_factory, label))
+        teams.append(run_team_eval(model_factory))
+
+    first = next(iter(sets))
+    result = per_set[first][0]  # The first run in full, so the saved file keeps its shape.
+    if "hard" in per_set:
+        result["hard"] = per_set["hard"][0]
+    attach_team(result, teams[0])
+    result["repeated"] = {
+        "runs": runs,
+        "sets": {name: aggregate_runs(cases, per_set[name]) for name, cases in sets.items()},
+        "briefing_team": aggregate_team(teams),
+    }
+    unfinished = [f"{name} set: {summary['runs'] - summary['complete_runs']} of {summary['runs']} runs"
+                  for name, summary in result["repeated"]["sets"].items() if summary["complete_runs"] < summary["runs"]]
+    team_summary = result["repeated"]["briefing_team"]
+    if team_summary["complete_runs"] < runs and result["complete"]:
+        unfinished.append(f"briefing team: {runs - team_summary['complete_runs']} of {runs} runs")
+    if unfinished and result["complete"]:
+        result["complete"] = False
+        result["incomplete_reason"] = f"Some runs did not finish ({'; '.join(unfinished)}), so the ranges are partial."
+
     for line in summary_lines(result):
         print(line)
     for path in save_result(result, directory):

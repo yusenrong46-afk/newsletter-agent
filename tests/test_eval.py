@@ -246,3 +246,134 @@ def test_an_unfinished_team_eval_makes_the_whole_eval_incomplete(tmp_path, monke
     assert "editor (incomplete)" in saved["incomplete_reason"]
     assert "Editor (incomplete)" in capsys.readouterr().out
     assert "A role did not finish" in next(tmp_path.glob("offline-*.html")).read_text(encoding="utf-8")
+
+
+# --- The hard set, lenient scoring, and repeated runs ---------------------------------------------
+
+def test_the_hard_set_is_valid_synthetic_and_actually_harder():
+    standard, hard = load_dataset(), load_dataset(name="hard")
+    assert len(hard) >= 60 and not {item["id"] for item in hard} & {item["id"] for item in standard}
+    assert sum(1 for item in hard if item["also_acceptable"]) >= 20  # Plenty of borderline cases.
+    for item in hard:
+        assert parseaddr(item["from"])[1].rsplit("@", 1)[1].endswith(".example"), item["from"]
+
+    model = OfflineModel()
+    easy = run_eval(standard, lambda: model, "offline")
+    difficult = run_eval(hard, lambda: model, "offline")
+    assert difficult["complete"] and difficult["category_accuracy"] < easy["category_accuracy"] - 0.2
+    assert difficult["lenient_category_accuracy"] > difficult["category_accuracy"]
+    assert difficult["triage"]["subscriptions_reaching_model"] < 1.0  # The privacy rules have a measured cost here.
+
+
+def test_lenient_accuracy_counts_only_the_listed_alternatives():
+    cases = [case("a", "transactional", also_acceptable=["product_update"]), case("b", "transactional"),
+             case("c", "editorial_newsletter", also_acceptable=["promotional_subscription"])]
+    outcome = {"a": "product_update", "b": "product_update", "c": "uncertain"}
+    result = score(cases, outcome, dict.fromkeys("abc", "bulk"))
+    assert (result["category_accuracy"], result["lenient_category_accuracy"]) == (0.0, 0.3333)
+    assert [(m["id"], m["acceptable"]) for m in result["mistakes"]] == [("a", True), ("b", False), ("c", False)]
+    assert result["clear_mistakes"] == 2
+
+
+@pytest.mark.parametrize("extra, message", [
+    ({"also_acceptable": ["newsletter"]}, "also_acceptable must be a list of labels"),
+    ({"also_acceptable": "transactional"}, "also_acceptable must be a list of labels"),
+    ({"also_acceptable": ["transactional"]}, "repeats the expected label"),
+])
+def test_invalid_alternative_labels_are_refused(tmp_path, extra, message):
+    path = tmp_path / "data.jsonl"
+    path.write_text(json.dumps(case("a", "transactional", **extra)), encoding="utf-8")
+    with pytest.raises(DatasetError, match=message):
+        load_dataset(path)
+
+
+def test_repeated_runs_report_a_range_and_name_the_emails_that_changed():
+    from newsletter_agent.evaluate import aggregate_runs, spread
+
+    cases = [case("steady", "editorial_newsletter"), case("flaky", "transactional"),
+             case("wrong", "product_update"), case("borderline", "transactional", also_acceptable=["product_update"])]
+    triage = dict.fromkeys(["steady", "flaky", "wrong", "borderline"], "bulk")
+
+    def one_run(flaky_answer):
+        outcome = {"steady": "editorial_newsletter", "flaky": flaky_answer, "wrong": "uncertain",
+                   "borderline": "product_update"}
+        return {**score(cases, outcome, triage), "complete": True, "usage": {"total_tokens": 100}}
+
+    summary = aggregate_runs(cases, [one_run("transactional"), one_run("uncertain"), one_run("transactional")])
+    assert summary["category_accuracy"] == {"mean": 0.4167, "min": 0.25, "max": 0.5, "values": [0.5, 0.25, 0.5]}
+    assert summary["lenient_category_accuracy"]["max"] == 0.75
+    assert [entry["id"] for entry in summary["changed_between_runs"]] == ["flaky"]
+    assert summary["changed_between_runs"][0]["answers"] == {"transactional": 2, "uncertain": 1}
+    assert [entry["id"] for entry in summary["always_wrong"]] == ["wrong"]
+    assert summary["stable_right"] == 2 and summary["total_tokens"] == 300  # "borderline" counts as right.
+    assert spread([None, None]) is None and spread([0.5, None])["values"] == [0.5]
+
+
+def test_the_eval_command_repeats_runs_and_saves_the_ranges(tmp_path, capsys):
+    assert cli.main(["eval", "--runs", "3", "--output", str(tmp_path)]) == 0
+    saved = json.loads(next(tmp_path.glob("offline-*.json")).read_text(encoding="utf-8"))
+    repeated = saved["repeated"]
+    assert repeated["runs"] == 3 and set(repeated["sets"]) == {"standard", "hard"}
+    assert repeated["sets"]["hard"]["complete_runs"] == 3
+    assert repeated["sets"]["standard"]["changed_between_runs"] == []  # The offline stand-in is deterministic.
+    assert repeated["briefing_team"]["catch_rate"]["values"] == [0.75, 0.75, 0.75]
+    assert saved["hard"]["cases"] == len(load_dataset(name="hard"))
+    output = capsys.readouterr().out
+    assert "Over 3 runs, hard set" in output and "Hard set (" in output
+    html = next(tmp_path.glob("offline-*.html")).read_text(encoding="utf-8")
+    assert "Repeated runs (3 runs)" in html and "Hard set" in html
+
+
+@pytest.mark.parametrize("runs", ["0", "11"])
+def test_the_number_of_runs_is_limited(tmp_path, runs, capsys):
+    assert cli.main(["eval", "--runs", runs, "--output", str(tmp_path)]) == 1
+    assert "--runs must be between 1 and 10" in capsys.readouterr().err
+    assert list(tmp_path.iterdir()) == []
+
+
+def test_one_unfinished_run_makes_the_ranges_partial(tmp_path, monkeypatch):
+    from newsletter_agent import evaluate
+
+    real, calls = evaluate.run_eval, []
+
+    def second_run_runs_out(cases, factory, label, **kwargs):
+        calls.append(label)
+        starve = len(calls) == 3  # Run 2 of the standard set (the call order is standard, hard, standard, hard).
+        return real(cases, factory, label, max_model_calls=1 if starve else 20)
+
+    monkeypatch.setattr(evaluate, "run_eval", second_run_runs_out)
+    assert cli.main(["eval", "--runs", "2", "--output", str(tmp_path)]) == 1
+    saved = json.loads(next(tmp_path.glob("offline-*.json")).read_text(encoding="utf-8"))
+    assert saved["complete"] is False and "standard set: 1 of 2 runs" in saved["incomplete_reason"]
+    assert saved["repeated"]["sets"]["standard"]["complete_runs"] == 1
+    html = next(tmp_path.glob("offline-*.html")).read_text(encoding="utf-8")
+    assert html.count('<span class="badge warn">Incomplete</span>') == 2  # At the top and beside the ranges.
+    assert "standard set: 1 of 2 runs" in html and "1 of 2 runs</td>" in html and "2 of 2 runs</td>" in html
+
+
+def test_a_finished_eval_page_carries_no_incomplete_warning(tmp_path):
+    assert cli.main(["eval", "--runs", "2", "--output", str(tmp_path)]) == 0
+    assert "Incomplete</span>" not in next(tmp_path.glob("offline-*.html")).read_text(encoding="utf-8")
+
+
+def test_an_email_wrong_in_different_ways_each_run_is_both_changed_and_always_wrong():
+    from newsletter_agent.evaluate import aggregate_runs
+
+    cases = [case("varies", "editorial_newsletter"), case("fine", "transactional")]
+    triage = {"varies": "bulk", "fine": "bulk"}
+
+    def one_run(answer):
+        outcome = {"varies": answer, "fine": "transactional"}
+        return {**score(cases, outcome, triage), "complete": True, "usage": {"total_tokens": 1}}
+
+    summary = aggregate_runs(cases, [one_run("transactional"), one_run("personal_or_other")])
+    assert [entry["id"] for entry in summary["changed_between_runs"]] == ["varies"]
+    assert [entry["id"] for entry in summary["always_wrong"]] == ["varies"]  # Never right, so it counts here too.
+    assert summary["stable_right"] == 1
+
+
+def test_a_multi_run_result_never_replaces_a_single_run_from_the_same_day(tmp_path):
+    assert cli.main(["eval", "--output", str(tmp_path)]) == 0
+    assert cli.main(["eval", "--runs", "2", "--output", str(tmp_path)]) == 0
+    names = sorted(path.name for path in tmp_path.glob("*.json"))
+    assert len(names) == 2 and names[0].endswith("-2runs.json") and "runs" not in names[1]

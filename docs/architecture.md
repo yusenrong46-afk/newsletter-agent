@@ -107,3 +107,26 @@ It reports:
 - **The briefing team** (`eval_data/briefing_team.json`): the fact-checker is given 34 bullets, 12 with a planted error (a changed number, an invented cause, a reversed fact, and one issue that tells the checker to approve everything), and is scored on errors caught and true bullets wrongly removed. The editor is given 14 bullets in which 3 stories are covered by more than one newsletter, and is scored over pairs of bullets on whether it grouped the right ones.
 
 Invented, missing or duplicate IDs count as unresolved and lower recall. A budget stop marks the result incomplete. `--real-model` refuses any dataset except the bundled synthetic one, so the eval can never send other email to OpenAI. CI runs the offline stand-in and fails if its scores drop. Results are in `evals/results/`.
+
+### The hard set
+
+`eval_data/dataset_hard.jsonl` holds 65 more invented emails chosen to be difficult: order confirmations full of recommendations, sales emails written like personal notes, a sponsor's message on a news list, alerts and digests that sit between categories, newsletters with misleading or empty subjects, people writing on group lists, and five prompt-injection attempts.
+
+- **Borderline cases have alternatives.** 31 of the 65 list other labels a careful person could give (`also_acceptable`). The eval reports strict accuracy (the expected label only) and lenient accuracy (either).
+- **The privacy rules have a measured cost.** Three cases are real newsletters with no mailing-list headers and fewer than 3 emails. Triage never sends them to the model, so they count as misses, and "subscriptions reaching the model" is 93% on this set.
+
+### Repeated runs
+
+A model does not give the same answers every time, so one run is a sample, not the score. `eval --runs N` (up to 10) repeats both sets and the briefing-team cases, each run from an empty cache, and reports for every figure the mean with the lowest and highest run. It also lists the emails whose answer changed between runs and the ones that were wrong every time. If any run does not finish, the result is marked incomplete. A multi-run result is saved under its own name (`<model>-<date>-<N>runs`), so it never replaces a single run from the same day.
+
+Latest measured (gpt-6-luna, 5 runs, 140,586 tokens):
+
+| | Standard set (96) | Hard set (65) |
+|---|---|---|
+| Right category, strict | 98.9% (96.8% to 100%) | 90.3% (88.3% to 93.3%) |
+| Right category, lenient | 98.9% | 95.0% (93.3% to 96.7%) |
+| Subscription detection F1 | 99.3% (97.8% to 100%) | 91.1% (90.0% to 92.7%) |
+| Emails that changed answer between runs | 5 | 6 |
+| Emails wrong on every run | 0 | 4 (3 never sent to the model) |
+
+The briefing team scored the same on all 5 runs: 12 of 12 planted errors caught, 0 of 22 true bullets removed, all 3 shared stories grouped. None of the hard set's injection attempts changed a label in any run.

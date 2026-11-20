@@ -57,6 +57,8 @@ select = ["E", "F", "W", "B", "UP", "SIM", "I"]
 [tool.ruff.lint.per-file-ignores]
 # A page template: its long lines are HTML and CSS text.
 "bench/make_report.py" = ["E501"]
+# Invented email text for the eval sets: long lines are data.
+"evals/build_dataset.py" = ["E501"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["newsletter_agent", "helpers"]

@@ -117,7 +117,8 @@ def command_demo(args) -> int:
 def command_eval(args) -> int:
     from .evaluate import run_eval_command
 
-    return run_eval_command(real_model=args.real_model, dataset=args.dataset, output=args.output, approved=args.yes)
+    return run_eval_command(real_model=args.real_model, dataset=args.dataset, output=args.output,
+                            approved=args.yes, runs=args.runs)
 
 
 def command_mcp_server(args) -> int:
@@ -186,6 +187,8 @@ def build_parser() -> argparse.ArgumentParser:
     evaluate.add_argument("--output", metavar="DIR",
                           help="Where to save the results (default ~/.newsletter-agent/evals)")
     evaluate.add_argument("--yes", action="store_true", help="With --real-model: approve without a prompt")
+    evaluate.add_argument("--runs", type=int, default=1, metavar="N",
+                          help="Repeat the eval N times (1-10) and report the mean and range")
     evaluate.set_defaults(handler=command_eval)
 
     commands.add_parser("mcp-server", help="Run the Gmail MCP server (used internally)").set_defaults(

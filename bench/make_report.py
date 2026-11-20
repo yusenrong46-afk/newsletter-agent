@@ -32,12 +32,14 @@ def load(name: str) -> dict:
 
 
 def all_evals(prefix: str) -> list[dict]:
-    return [json.loads(path.read_text(encoding="utf-8")) for path in sorted(EVALS.glob(f"{prefix}-*.json"))]
+    """Every saved result for one model, oldest first (by when it was generated, not by file name)."""
+    results = [json.loads(path.read_text(encoding="utf-8")) for path in EVALS.glob(f"{prefix}-*.json")]
+    return sorted(results, key=lambda result: result["generated_at"])
 
 
 def latest_eval(prefix: str) -> dict | None:
-    files = sorted(EVALS.glob(f"{prefix}-*.json"))
-    return json.loads(files[-1].read_text(encoding="utf-8")) if files else None
+    results = all_evals(prefix)
+    return results[-1] if results else None
 
 
 def mb(value: int) -> str:
@@ -415,7 +417,21 @@ def build(before: dict, after: dict, ci: dict, model_eval: dict | None, offline_
 
     if model_eval:
         runs = all_evals("gpt-6-luna")
-        if len(runs) > 1:
+        repeated = model_eval.get("repeated", {})
+        if repeated.get("runs", 1) > 1:
+            standard, hard = repeated["sets"]["standard"], repeated["sets"]["hard"]
+
+            def span(values):
+                return f"{pct(values['mean'])} on average ({pct(values['min'])} to {pct(values['max'])})"
+
+            runs_note = (
+                f"The model does not give the same answers every time, so the eval was repeated {repeated['runs']} "
+                f"times: {span(standard['category_accuracy'])} in the right category on these emails, with "
+                f"{len(standard['changed_between_runs'])} emails changing answer between runs. On a second, harder "
+                f"set of {hard['cases']} borderline emails it scored {span(hard['category_accuracy'])}, or "
+                f"{pct(hard['lenient_category_accuracy']['mean'])} when other reasonable labels count. The numbers "
+                f"above and the grid below show the first of those runs.")
+        elif len(runs) > 1:
             listed = "; ".join(f"{run['generated_at'][:10]}: {pct(run['category_accuracy'])} right category, "
                                f"{len(run['mistakes'])} mistakes" for run in runs)
             runs_note = (f"The model's answers vary a little between runs on the same emails ({listed}), mostly on "
