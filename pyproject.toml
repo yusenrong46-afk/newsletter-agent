@@ -1,6 +1,6 @@
 [project]
 name = "newsletter-agent"
-version = "0.2.0"
+version = "0.3.0"
 description = "Inventory the newsletters in your Gmail and get a daily briefing. Read-only, local, budget-capped."
 readme = "README.md"
 license = "MIT"

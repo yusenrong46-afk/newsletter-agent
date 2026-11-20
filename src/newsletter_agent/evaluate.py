@@ -14,6 +14,9 @@ validation) on invented emails with known answers, then scores it:
 - triage: how many real subscriptions reached the model, and how many personal
   emails were kept from it (or sent as headers only).
 - publication names, unresolved answers, and tokens per 1,000 emails.
+- the briefing team: how many planted errors the fact-checker catches and how
+  many true bullets it wrongly removes, and how well the editor groups bullets
+  that report the same story.
 
 No real email is involved: the mailbox is SyntheticGmail, and --real-model
 refuses any dataset except the bundled one.
@@ -31,6 +34,8 @@ from importlib import resources
 from pathlib import Path
 
 from . import config
+from .briefing import Budget
+from .briefing_team import BriefingState, Bullet, TeamContext, edit, fact_check
 from .classify import ALL_CATEGORIES, MODEL, SUBSCRIPTION_CATEGORIES, ModelClient
 from .demo import DAY_MS, OfflineModel, SyntheticGmail, demo_gmail_client, encode, make_message
 from .html_report import CATEGORY_LABELS, card, page
@@ -44,6 +49,8 @@ EVAL_MAX_TOKENS = 400_000
 EXTRA_OUTCOMES = ("unresolved", "pending", "not_sent")
 SHIP_BAR_SUBSCRIPTION_F1 = 0.90
 REQUIRED_KEYS = ("id", "from", "subject", "expected", "days_ago")
+TEAM_MAX_MODEL_CALLS = 10
+TEAM_MAX_TOKENS = 150_000
 
 
 class DatasetError(ValueError):
@@ -240,6 +247,100 @@ def run_eval(cases: list[dict], model_factory: Callable[[], ModelClient], label:
     return result
 
 
+# --- The briefing team ------------------------------------------------------------------
+
+def load_team_cases() -> dict:
+    text = (resources.files("newsletter_agent") / "eval_data" / "briefing_team.json").read_text(encoding="utf-8")
+    return json.loads(text)
+
+
+def score_fact_check(expected: dict[str, bool], verdicts: dict[str, str]) -> dict:
+    """expected: bullet ID -> is it supported by its text. verdicts: bullet ID -> the checker's verdict."""
+    planted = [bullet_id for bullet_id, supported in expected.items() if not supported]
+    true = [bullet_id for bullet_id, supported in expected.items() if supported]
+    caught = sum(1 for bullet_id in planted if verdicts[bullet_id] == "unsupported")
+    wrongly_removed = sum(1 for bullet_id in true if verdicts[bullet_id] == "unsupported")
+    return {
+        "bullets": len(expected), "planted_errors": len(planted), "errors_caught": caught,
+        "errors_missed": len(planted) - caught, "catch_rate": ratio(caught, len(planted)),
+        "true_bullets": len(true), "true_bullets_wrongly_removed": wrongly_removed,
+        "wrongly_removed_rate": ratio(wrongly_removed, len(true)),
+        "unchecked": sum(1 for verdict in verdicts.values() if verdict == "unchecked"),
+    }
+
+
+def score_grouping(labels: dict[str, str | None], stories: list[list[str]]) -> dict:
+    """Pairwise scoring: two bullets are a 'pair' if they report the same story.
+
+    labels: bullet ID -> story label (None for a story only one newsletter covered).
+    stories: the editor's top stories, each a list of bullet IDs.
+    """
+    ids = sorted(labels)
+    story_of = {bullet_id: index for index, story in enumerate(stories) for bullet_id in story}
+    true_pairs = predicted_pairs = both = 0
+    for position, first in enumerate(ids):
+        for second in ids[position + 1:]:
+            same_truth = labels[first] is not None and labels[first] == labels[second]
+            same_predicted = first in story_of and story_of.get(first) == story_of.get(second)
+            true_pairs += same_truth
+            predicted_pairs += same_predicted
+            both += same_truth and same_predicted
+    precision, recall = ratio(both, predicted_pairs), ratio(both, true_pairs)
+    shared = {label for label in labels.values() if label is not None}
+    found = sum(1 for label in shared
+                if any({b for b in story} == {b for b, value in labels.items() if value == label} for story in stories))
+    return {
+        "bullets": len(ids), "shared_stories": len(shared), "shared_stories_found_exactly": found,
+        "true_pairs": true_pairs, "predicted_pairs": predicted_pairs, "correct_pairs": both,
+        "precision": precision, "recall": recall,
+        "f1": 0.0 if true_pairs and not predicted_pairs else f1(precision, recall),
+        "top_stories": len(stories),
+    }
+
+
+async def run_team_cases(cases: dict, model: ModelClient, max_model_calls: int, max_tokens: int) -> dict:
+    """Run the real fact_check and edit roles on prepared bullets, then score them."""
+    budget = Budget(max_model_calls, max_tokens)
+    context = TeamContext(gmail=None, model=model, budget=budget, settings={})
+
+    issues = [{"message_id": case["id"], "publication": case["publication"], "subject": case["subject"]}
+              for case in cases["fact_check"]]
+    checking = BriefingState(issues=issues, texts={case["id"]: case["text"] for case in cases["fact_check"]})
+    expected: dict[str, bool] = {}
+    for case in cases["fact_check"]:
+        for bullet in case["bullets"]:
+            bullet_id = f"b{len(expected) + 1}"
+            expected[bullet_id] = bullet["supported"]
+            checking.bullets.append(Bullet(id=bullet_id, issue_id=case["id"], text=bullet["text"]))
+            checking.summary.bullets.setdefault(case["id"], []).append(bullet["text"])
+    await fact_check(checking, context)
+
+    editing = BriefingState(issues=[
+        {"message_id": f"e{index}", "publication": item["publication"], "subject": ""}
+        for index, item in enumerate(cases["editor"], start=1)])
+    labels: dict[str, str | None] = {}
+    for index, item in enumerate(cases["editor"], start=1):
+        labels[f"b{index}"] = item["story"]
+        editing.bullets.append(Bullet(id=f"b{index}", issue_id=f"e{index}", text=item["text"], verdict="supported"))
+    await edit(editing, context)
+
+    usage = {key: checking.usage["fact_check"][key] + editing.usage["editor"][key] for key in checking.usage["editor"]}
+    return {
+        "fact_check": {**score_fact_check(expected, {bullet.id: bullet.verdict for bullet in checking.bullets}),
+                       "status": checking.status["fact_check"]},
+        "editor": {**score_grouping(labels, [[bullet["bullet_id"] for bullet in story["bullets"]]
+                                             for story in editing.top_stories]),
+                   "status": editing.status["editor"],
+                   "headlines": [story["headline"] for story in editing.top_stories]},
+        "usage": usage,
+    }
+
+
+def run_team_eval(model_factory: Callable[[], ModelClient], max_model_calls: int = TEAM_MAX_MODEL_CALLS,
+                  max_tokens: int = TEAM_MAX_TOKENS) -> dict:
+    return asyncio.run(run_team_cases(load_team_cases(), model_factory(), max_model_calls, max_tokens))
+
+
 # --- Output -----------------------------------------------------------------------
 
 def percent(value: float | None) -> str:
@@ -288,10 +389,33 @@ def render_eval_html(result: dict) -> str:
 <div class="table-wrap"><table><thead><tr><th>True label</th>{header}</tr></thead><tbody>{rows}</tbody></table></div>
 <h2>Mistakes</h2>
 <ul class="notes">{mistakes}</ul>
+{render_team_html(result.get('briefing_team'))}
 <p class="muted small">"Not sent" means the privacy triage kept the email from the model. For personal email that is
 the right outcome and is not counted as a mistake.</p>
 """
     return page("Classification quality", body)
+
+
+def render_team_html(team: dict | None) -> str:
+    if not team:
+        return ""
+    check, editor = team["fact_check"], team["editor"]
+    headlines = "".join(f"<li>{escape(headline)}</li>" for headline in editor["headlines"]) or "<li>None.</li>"
+    return f"""
+<h2>Briefing team</h2>
+<div class="cards">
+  {card(f"{check['errors_caught']} / {check['planted_errors']}", 'planted errors caught by the fact-checker')}
+  {card(f"{check['true_bullets_wrongly_removed']} / {check['true_bullets']}", 'true bullets wrongly removed')}
+  {card(percent(editor['f1']), 'editor: same-story grouping F1')}
+  {card(f"{editor['shared_stories_found_exactly']} / {editor['shared_stories']}", 'shared stories grouped exactly')}
+  {card(f"{team['usage']['total_tokens']:,}", 'tokens for both roles')}
+</div>
+<p class="muted small">The fact-checker is given {check['bullets']} bullets, {check['planted_errors']} with a planted
+error. The editor is given {editor['bullets']} bullets in which {editor['shared_stories']} stories are covered by
+more than one newsletter; grouping is scored over pairs of bullets.</p>
+<h2>Top stories the editor chose</h2>
+<ul class="notes">{headlines}</ul>
+"""
 
 
 def summary_lines(result: dict) -> list[str]:
@@ -309,6 +433,17 @@ def summary_lines(result: dict) -> list[str]:
     ]
     if not result["complete"]:
         lines.append(f"Incomplete: {result['incomplete_reason']}")
+    team = result.get("briefing_team")
+    if team:
+        check, editor = team["fact_check"], team["editor"]
+        lines.append(
+            f"Fact-checker: caught {check['errors_caught']} of {check['planted_errors']} planted errors "
+            f"({percent(check['catch_rate'])}); wrongly removed {check['true_bullets_wrongly_removed']} of "
+            f"{check['true_bullets']} true bullets; {check['unchecked']} unchecked")
+        lines.append(
+            f"Editor: grouping F1 {percent(editor['f1'])} (precision {percent(editor['precision'])}, "
+            f"recall {percent(editor['recall'])}); {editor['shared_stories_found_exactly']} of "
+            f"{editor['shared_stories']} shared stories grouped exactly")
     return lines
 
 
@@ -334,9 +469,11 @@ def run_eval_command(real_model: bool = False, dataset: str | None = None, outpu
 
         def confirm(preflight: dict) -> bool:
             return ask_yes_no(
-                f"Send {preflight['messages_to_classify']} invented emails to OpenAI ({MODEL}) for the eval? "
-                f"At most {preflight['estimated_maximum_total_tokens']:,} tokens; "
-                f"hard limit {EVAL_MAX_MODEL_CALLS} calls / {EVAL_MAX_TOKENS:,} tokens.")
+                f"Send {preflight['messages_to_classify']} invented emails to OpenAI ({MODEL}) for the eval, "
+                f"then about 10 short invented issues for the briefing-team eval? "
+                f"At most {preflight['estimated_maximum_total_tokens']:,} tokens for the first part; hard limits "
+                f"{EVAL_MAX_MODEL_CALLS} calls / {EVAL_MAX_TOKENS:,} tokens, then {TEAM_MAX_MODEL_CALLS} calls / "
+                f"{TEAM_MAX_TOKENS:,} tokens.")
 
         result = run_eval(cases, make_openai_client, MODEL, approved=approved, confirm=confirm)
         if result["status"] == "awaiting_approval":
@@ -346,9 +483,11 @@ def run_eval_command(real_model: bool = False, dataset: str | None = None, outpu
                 return 0
             print("Not interactive: re-run with --yes to approve sending the synthetic emails to OpenAI.")
             return 2
+        result["briefing_team"] = run_team_eval(make_openai_client)
     else:
         model = OfflineModel()
         result = run_eval(cases, lambda: model, "offline")
+        result["briefing_team"] = run_team_eval(lambda: model)
     for line in summary_lines(result):
         print(line)
     for path in save_result(result, directory):

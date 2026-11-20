@@ -45,7 +45,8 @@ h1 { font-size: 26px; margin: 0 0 4px; } h2 { font-size: 18px; margin: 32px 0 12
 .table-wrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; }
 table { border-collapse: collapse; width: 100%; min-width: 640px; }
 th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
-th { font-size: 13px; color: var(--muted); font-weight: 600; cursor: pointer; user-select: none; white-space: nowrap; }
+th { font-size: 13px; color: var(--muted); font-weight: 600; user-select: none; white-space: nowrap; }
+th[data-sort] { cursor: pointer; }
 th.num, td.num { text-align: right; font-variant-numeric: tabular-nums; }
 tr:last-child td { border-bottom: none; }
 details summary { cursor: pointer; } details .detail { color: var(--muted); font-size: 13px; margin-top: 6px; }
@@ -53,6 +54,13 @@ ul.notes li { margin: 4px 0; }
 .section { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px; margin: 12px 0; }
 .section h3 { margin: 0 0 8px; font-size: 16px; }
 .source { color: var(--muted); font-size: 13px; }
+.advice { display: grid; gap: 8px; }
+.advice-item { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px;
+  display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; align-items: baseline; }
+.advice-item .reason { grid-column: 1 / -1; color: var(--muted); font-size: 13px; }
+.spark { display: block; }
+.spark polyline { fill: none; stroke: var(--accent); stroke-width: 1.5; }
+.spark circle { fill: var(--accent); }
 </style>
 </head>
 <body>
@@ -77,6 +85,21 @@ ul.notes li { margin: 4px 0; }
 <div class="table-wrap"><table><thead><tr><th>True label</th><th class="num">Newsletter</th><th class="num">Promotion</th><th class="num">Product update</th><th class="num">Transactional</th><th class="num">Personal / other</th><th class="num">Uncertain</th><th class="num">Unresolved</th><th class="num">Pending</th><th class="num">Not sent</th></tr></thead><tbody><tr><td>Newsletter</td><td class="num">37</td><td class="num">1</td><td class="num"></td><td class="num"></td><td class="num"></td><td class="num"></td><td class="num"></td><td class="num"></td><td class="num"></td></tr><tr><td>Promotion</td><td class="num">6</td><td class="num">14</td><td class="num"></td><td class="num"></td><td class="num"></td><td class="num"></td><td class="num"></td><td class="num"></td><td class="num"></td></tr><tr><td>Product update</td><td class="num">5</td><td class="num"></td><td class="num">3</td><td class="num"></td><td class="num">3</td><td class="num"></td><td class="num"></td><td class="num"></td><td class="num"></td></tr><tr><td>Transactional</td><td class="num">6</td><td class="num"></td><td class="num"></td><td class="num">14</td><td class="num"></td><td class="num"></td><td class="num"></td><td class="num"></td><td class="num"></td></tr><tr><td>Personal / other</td><td class="num">1</td><td class="num"></td><td class="num"></td><td class="num"></td><td class="num">3</td><td class="num"></td><td class="num"></td><td class="num"></td><td class="num">3</td></tr></tbody></table></div>
 <h2>Mistakes</h2>
 <ul class="notes"><li>Reset your password: expected Transactional, got Newsletter · Security code with list headers</li><li>Your order has shipped: expected Transactional, got Newsletter · Shipping notice with a marketing footer</li><li>New sign-in from Firefox on Linux: expected Transactional, got Newsletter</li><li>Your tickets for Harbor Lights Festival: expected Transactional, got Newsletter</li><li>Re: your comment on my post: expected Personal / other, got Newsletter · A friend replying through a newsletter platform</li><li>Your weekly site report: week 22: expected Product update, got Personal / other · Automated weekly report with no list headers; headers only</li><li>Your weekly site report: week 21: expected Product update, got Personal / other · Automated weekly report with no list headers; headers only</li><li>Your weekly site report: week 20: expected Product update, got Personal / other · Automated weekly report with no list headers; headers only</li><li>We&#x27;re updating our terms of service: expected Product update, got Newsletter</li><li>Introducing offline mode: expected Product update, got Newsletter</li><li>Upgrade to Notewell Pro and save 30%: expected Promotion, got Newsletter</li><li>Pixel Forge 5.0 is here: expected Product update, got Newsletter</li><li>Free webinar: double your email signups: expected Promotion, got Newsletter</li><li>Can you help us plant 1,000 trees?: expected Promotion, got Newsletter</li><li>Why the summer sale season is changing: expected Newsletter, got Promotion · Editorial issue with the word &#x27;sale&#x27; in the subject</li><li>Our story: how we source our beans: expected Promotion, got Newsletter · Promotion written like an article</li><li>You have 450 points to spend: expected Promotion, got Newsletter</li><li>Your subscription renews on 5 June: expected Transactional, got Newsletter</li><li>Your Notewell sign-in code: expected Transactional, got Newsletter</li><li>24 hours only: headphones from $19: expected Promotion, got Newsletter</li><li>Taskline changelog: May: expected Product update, got Newsletter</li><li>Scheduled maintenance on 8 June: expected Product update, got Newsletter</li></ul>
+
+<h2>Briefing team</h2>
+<div class="cards">
+  <div class="card"><div class="value">9 / 12</div><div class="label">planted errors caught by the fact-checker</div></div>
+  <div class="card"><div class="value">2 / 22</div><div class="label">true bullets wrongly removed</div></div>
+  <div class="card"><div class="value">88.9%</div><div class="label">editor: same-story grouping F1</div></div>
+  <div class="card"><div class="value">2 / 3</div><div class="label">shared stories grouped exactly</div></div>
+  <div class="card"><div class="value">0</div><div class="label">tokens for both roles</div></div>
+</div>
+<p class="muted small">The fact-checker is given 34 bullets, 12 with a planted
+error. The editor is given 14 bullets in which 3 stories are covered by
+more than one newsletter; grouping is scored over pairs of bullets.</p>
+<h2>Top stories the editor chose</h2>
+<ul class="notes"><li>The central bank held its main rate at 4.25% for</li><li>The Selene-3 lander found water ice just below the surface</li><li>The open-source editor Quill reached version 1.0 with a new</li><li>Quill 1.0 is out after four years, adding plugins and</li><li>Volunteers counted 1,240 wading birds at the restored Marlow wetland</li></ul>
+
 <p class="muted small">"Not sent" means the privacy triage kept the email from the model. For personal email that is
 the right outcome and is not counted as a mistake.</p>
 

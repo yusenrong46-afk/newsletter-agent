@@ -1,7 +1,7 @@
 {
  "label": "offline",
  "model": "offline stand-in (keyword rules)",
- "generated_at": "2026-11-19T21:16:58+00:00",
+ "generated_at": "2026-11-20T13:40:58+00:00",
  "dataset": {
   "cases": 96,
   "by_label": {
@@ -321,5 +321,45 @@
   "metric": "subscription_detection.f1",
   "minimum": 0.9,
   "met": true
+ },
+ "briefing_team": {
+  "fact_check": {
+   "bullets": 34,
+   "planted_errors": 12,
+   "errors_caught": 9,
+   "errors_missed": 3,
+   "catch_rate": 0.75,
+   "true_bullets": 22,
+   "true_bullets_wrongly_removed": 2,
+   "wrongly_removed_rate": 0.0909,
+   "unchecked": 0,
+   "status": "done"
+  },
+  "editor": {
+   "bullets": 14,
+   "shared_stories": 3,
+   "shared_stories_found_exactly": 2,
+   "true_pairs": 5,
+   "predicted_pairs": 4,
+   "correct_pairs": 4,
+   "precision": 1.0,
+   "recall": 0.8,
+   "f1": 0.8889,
+   "top_stories": 5,
+   "status": "done",
+   "headlines": [
+    "The central bank held its main rate at 4.25% for",
+    "The Selene-3 lander found water ice just below the surface",
+    "The open-source editor Quill reached version 1.0 with a new",
+    "Quill 1.0 is out after four years, adding plugins and",
+    "Volunteers counted 1,240 wading birds at the restored Marlow wetland"
+   ]
+  },
+  "usage": {
+   "model_calls": 3,
+   "input_tokens": 0,
+   "output_tokens": 0,
+   "total_tokens": 0
+  }
  }
 }

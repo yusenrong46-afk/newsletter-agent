@@ -15,6 +15,7 @@
 | `html_report.py` | Self-contained HTML pages with escaping and a CSP |
 | `inventory.py` | The inventory workflow and its command |
 | `briefing.py` | Incremental briefing: select, summarize, validate sources, render, notify |
+| `briefing_team.py` | The briefing's three model roles (summarize, fact-check, edit), their shared state, and the checks on each answer |
 | `chat.py` | Chat with three local read-only tools |
 | `schedule.py` | Daily schedule after consent: launchd (macOS), systemd user timer (Linux), Task Scheduler (Windows) |
 | `demo.py` | Synthetic mailbox, offline model stand-in, demo site |
@@ -70,11 +71,29 @@ Both are plain Python on dates and unread flags, with no model calls.
 2. **Scan and classify:** the same scan and classification code, so only new mail is classified. The briefing uses its own checkpoint but shares the caches.
 3. **Select:** new `editorial_newsletter` issues, with optional include/exclude filters by publication name.
 4. **Summarize:** up to 6,000 characters per issue, 8 issues per call. Each bullet must cite a `source_message_id` from its own batch; otherwise it is dropped and counted. Links are removed from both the input and the output.
-5. **Save:** a dated HTML page, `latest.html`, and a counts-only desktop notification (macOS `osascript`, Linux `notify-send`; none on Windows). The window moves forward only after a complete briefing, so a failure or budget stop never skips mail.
+5. **Fact-check and edit:** see "The briefing team" below.
+6. **Save:** a dated HTML page, `latest.html`, and a counts-only desktop notification (macOS `osascript`, Linux `notify-send`; none on Windows). The window moves forward only after a complete briefing, so a failure or budget stop never skips mail.
 
 ## Testing
 
 `uv run pytest` runs entirely offline. The workflow tests use the **real** FastMCP server and protocol, connected in memory to `SyntheticGmail` (a stand-in for Google's client), and a fake OpenAI client. A few tests run the installed OpenAI SDK against a local `httpx.MockTransport` to check the exact request shapes.
+
+## The briefing team
+
+Three model roles run in a fixed order, driven by plain Python (`briefing_team.py`):
+
+| Role | Sees | Returns | Python checks |
+|---|---|---|---|
+| `summarize` | issue text | bullets that cite an issue | the existing source check |
+| `fact_check` | issue text and that issue's bullets | supported or not, per bullet ID | A verdict counts only if it cites a real bullet exactly once. Unsupported bullets are removed and counted; the role can never rewrite one. |
+| `edit` | the surviving bullets only, never email text | up to 5 stories: a headline of at most 12 words and the bullet IDs it covers | Bullet IDs must be real and used once; headlines are cleaned and links removed; "covered by N newsletters" is counted by Python. |
+
+- **One shape:** every role is `async def role(state, context) -> state`, and all three read and update one `BriefingState`. That is the shape graph frameworks use, so adopting one later (for loops or run-time routing) would be a small change. A fixed three-step list does not need a framework.
+- **Bullet IDs come from Python** (`b1`, `b2`, …). The model only ever cites them, which is what makes its answers checkable.
+- **Only the summarizer is essential.** If the fact-checker or the editor fails, is refused, runs out of budget, or is switched off, the briefing is still produced, with a note, and still counts as complete. A bullet with no trustworthy verdict is kept and counted as unchecked.
+- **One shared budget**, spent in role order. Defaults are 60 calls and 600,000 tokens per briefing; a saved `config.toml` keeps the cap it already has.
+- **Issue text stays in memory.** `BriefingState.to_dict()` leaves it out, and it is cleared after the last role.
+- **Chat is unchanged:** it summarizes with the summarizer alone.
 
 ## Measuring quality
 
@@ -85,5 +104,6 @@ It reports:
 - **Per-category precision, recall and F1**, and a confusion matrix, over the emails that reached the model.
 - **Triage coverage:** how many real subscriptions reached the model, and how many personal emails were kept from it or sent as headers only.
 - **Publication-name accuracy, unresolved answers, and tokens per 1,000 emails.**
+- **The briefing team** (`eval_data/briefing_team.json`): the fact-checker is given 34 bullets, 12 with a planted error (a changed number, an invented cause, a reversed fact, and one issue that tells the checker to approve everything), and is scored on errors caught and true bullets wrongly removed. The editor is given 14 bullets in which 3 stories are covered by more than one newsletter, and is scored over pairs of bullets on whether it grouped the right ones.
 
 Invented, missing or duplicate IDs count as unresolved and lower recall. A budget stop marks the result incomplete. `--real-model` refuses any dataset except the bundled synthetic one, so the eval can never send other email to OpenAI. CI runs the offline stand-in and fails if its scores drop. Results are in `evals/results/`.

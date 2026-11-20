@@ -70,7 +70,8 @@ def test_first_briefing_covers_24_hours_and_only_newsletters(tmp_path):
     result, fake = brief(tmp_path, fake_gmail(todays_mail()))
     publications = {section["publication"] for section in result["sections"]}
     assert publications == {"Ledger", "Garden"}  # Not the promotion, the receipt, or last week's issue.
-    assert result["counts"] == {"issues": 2, "summarized": 2, "publications": 2, "dropped_bullets": 0}
+    assert result["counts"] == {"issues": 2, "summarized": 2, "publications": 2, "dropped_bullets": 0,
+                                "unsupported_bullets": 0, "unchecked_bullets": 0, "top_stories": 0}
     assert "First briefing" in result["notes"][0]
     assert state(tmp_path) == {"last_success_end_ms": NOW_MS}
     html = (tmp_path / "briefings" / "latest.html").read_text(encoding="utf-8")

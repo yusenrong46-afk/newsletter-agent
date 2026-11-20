@@ -248,7 +248,7 @@ footer { color: var(--muted); font-size: 0.86rem; border-top: 1px solid var(--li
     <div class="counter panel"><span class="was">20</span>
       <b class="num" data-from="20" data-to="0" data-decimals="0" data-suffix="">0</b><span>type errors</span></div>
     <div class="counter panel"><span class="was">94</span>
-      <b class="num" data-from="94" data-to="170" data-decimals="0" data-suffix="">170</b><span>tests, all passing, all offline</span></div>
+      <b class="num" data-from="94" data-to="194" data-decimals="0" data-suffix="">194</b><span>tests, all passing, all offline</span></div>
   </div>
   <p class="muted small">Same settings for both versions: ruff 0.17.6 --line-length 120 --select E,F,W,B,UP,SIM,I --target-version py311 --config lint.isort.known-first-party = [&#x27;newsletter_agent&#x27;, &#x27;helpers&#x27;];
   mypy 2.4.1 --python-version 3.11 --check-untyped-defs --ignore-missing-imports. New tests cover failures on purpose: a hard kill mid-scan, a corrupt
@@ -277,27 +277,26 @@ footer { color: var(--muted); font-size: 0.86rem; border-top: 1px solid var(--li
   <p>A new <code>eval</code> command runs the real app on 96 invented emails
   with known answers: ordinary newsletters plus traps, such as a receipt from a newsletter brand, a friend writing
   through a newsletter platform, emails in four languages, and two emails that try to give the AI orders.</p>
-  <div class="big"><b class="num" data-from="0" data-to="100.0" data-decimals="0" data-suffix="%">100%</b><span>of subscriptions spotted correctly
-(F1), 100% put in the right category, 0 mistakes</span></div>
+  <div class="big"><b class="num" data-from="0" data-to="97.00999999999999" data-decimals="0" data-suffix="%">97%</b><span>of subscriptions spotted correctly
+(F1), 95.7% put in the right category, 4 mistakes</span></div>
   
 <div class="panel bars">
   <div class="bar-row"><span class="label">Is it a subscription?<small>v0.1: never measured</small></span><div class="bar-track"><div class="bar-fill none" style="width:0.0%"></div></div><span class="num">—</span></div>
   <div class="bar-row"><span class="label">Is it a subscription?<small>offline keyword rules (CI baseline)</small></span><div class="bar-track"><div class="bar-fill offline" style="width:93.0%"></div></div><span class="num">93%</span></div>
-  <div class="bar-row"><span class="label">Is it a subscription?<small>gpt-6-luna</small></span><div class="bar-track"><div class="bar-fill model" style="width:100.0%"></div></div><span class="num">100%</span></div>
+  <div class="bar-row"><span class="label">Is it a subscription?<small>gpt-6-luna</small></span><div class="bar-track"><div class="bar-fill model" style="width:97.0%"></div></div><span class="num">97%</span></div>
   <div class="bar-row"><span class="label">Right category<small>offline keyword rules</small></span><div class="bar-track"><div class="bar-fill offline" style="width:76.3%"></div></div><span class="num">76.3%</span></div>
-  <div class="bar-row"><span class="label">Right category<small>gpt-6-luna</small></span><div class="bar-track"><div class="bar-fill model" style="width:100.0%"></div></div><span class="num">100%</span></div>
+  <div class="bar-row"><span class="label">Right category<small>gpt-6-luna</small></span><div class="bar-track"><div class="bar-fill model" style="width:95.7%"></div></div><span class="num">95.7%</span></div>
 </div>
 <div class="panel matrix-wrap">
   <h3>Where each of the 96 test emails landed (gpt-6-luna)</h3>
   <p class="muted small">Rows are the true answer, columns what the app decided. Blue cells are right; any orange cell is
   a mistake. "Kept private" means the privacy rules never sent the email to the model, which is the right outcome
   for personal mail.</p>
-  <table class="matrix"><thead><tr><th class="row">True label ↓ / answer →</th><th>Newsletter</th><th>Promotion</th><th>Product update</th><th>Transactional</th><th>Personal</th><th>Kept private</th></tr></thead><tbody><tr><th class="row">Newsletter</th><td class="hit" style="--i:0">38</td><td class="" style="--i:1"></td><td class="" style="--i:2"></td><td class="" style="--i:3"></td><td class="" style="--i:4"></td><td class="" style="--i:5"></td></tr><tr><th class="row">Promotion</th><td class="" style="--i:6"></td><td class="hit" style="--i:7">20</td><td class="" style="--i:8"></td><td class="" style="--i:9"></td><td class="" style="--i:10"></td><td class="" style="--i:11"></td></tr><tr><th class="row">Product update</th><td class="" style="--i:12"></td><td class="" style="--i:13"></td><td class="hit" style="--i:14">11</td><td class="" style="--i:15"></td><td class="" style="--i:16"></td><td class="" style="--i:17"></td></tr><tr><th class="row">Transactional</th><td class="" style="--i:18"></td><td class="" style="--i:19"></td><td class="" style="--i:20"></td><td class="hit" style="--i:21">20</td><td class="" style="--i:22"></td><td class="" style="--i:23"></td></tr><tr><th class="row">Personal</th><td class="" style="--i:24"></td><td class="" style="--i:25"></td><td class="" style="--i:26"></td><td class="" style="--i:27"></td><td class="hit" style="--i:28">4</td><td class="hit" style="--i:29">3</td></tr></tbody></table>
+  <table class="matrix"><thead><tr><th class="row">True label ↓ / answer →</th><th>Newsletter</th><th>Promotion</th><th>Product update</th><th>Transactional</th><th>Personal</th><th>Kept private</th></tr></thead><tbody><tr><th class="row">Newsletter</th><td class="hit" style="--i:0">38</td><td class="" style="--i:1"></td><td class="" style="--i:2"></td><td class="" style="--i:3"></td><td class="" style="--i:4"></td><td class="" style="--i:5"></td></tr><tr><th class="row">Promotion</th><td class="" style="--i:6"></td><td class="hit" style="--i:7">20</td><td class="" style="--i:8"></td><td class="" style="--i:9"></td><td class="" style="--i:10"></td><td class="" style="--i:11"></td></tr><tr><th class="row">Product update</th><td class="" style="--i:12"></td><td class="" style="--i:13"></td><td class="hit" style="--i:14">7</td><td class="miss" style="--i:15">1</td><td class="" style="--i:16"></td><td class="" style="--i:17"></td></tr><tr><th class="row">Transactional</th><td class="" style="--i:18"></td><td class="" style="--i:19"></td><td class="" style="--i:20"></td><td class="hit" style="--i:21">20</td><td class="" style="--i:22"></td><td class="" style="--i:23"></td></tr><tr><th class="row">Personal</th><td class="" style="--i:24"></td><td class="" style="--i:25"></td><td class="" style="--i:26"></td><td class="" style="--i:27"></td><td class="hit" style="--i:28">4</td><td class="hit" style="--i:29">3</td></tr></tbody></table>
 </div>
-<p class="muted small">Honest limits: these are 96 invented, fairly clear-cut emails, and the run used
-14,441 tokens (4 calls). A perfect score on 96
-emails suggests the real error rate is low (likely under about 3%), not that it is zero.
-Real inboxes are messier. Rerun with <code>newsletter-agent eval --real-model</code>.</p>
+<p class="muted small">Honest limits: these are 96 invented, fairly clear-cut emails, and this run used
+14,882 tokens (4 calls). The model's answers vary a little between runs on the same emails (2026-11-19: 100% right category, 0 mistakes; 2026-11-20: 95.7% right category, 4 mistakes), mostly on borderline cases, so read the score as a range, not one exact number. Real inboxes are
+messier. Rerun with <code>newsletter-agent eval --real-model</code>.</p>
   <button class="replay" type="button">Replay</button>
 </section>
 

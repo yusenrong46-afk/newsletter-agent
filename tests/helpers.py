@@ -15,6 +15,7 @@ from types import SimpleNamespace
 from mcp.shared.memory import create_connected_server_and_client_session
 
 from newsletter_agent.briefing import BriefingBatch, SummaryBullet
+from newsletter_agent.briefing_team import BulletVerdict, EditorPlan, FactCheckBatch
 from newsletter_agent.classify import ClassificationBatch, MessageClassification
 from newsletter_agent.demo import SyntheticGmail, make_message
 from newsletter_agent.gmail_client import GmailMcpClient
@@ -107,12 +108,26 @@ def fake_response(parsed, status="completed", output=(), incomplete_reason=None,
     )
 
 
+def default_fact_check_handler(issues):
+    """Every bullet is supported."""
+    return FactCheckBatch(verdicts=[BulletVerdict(bullet_id=bullet["bullet_id"], supported=True)
+                                    for issue in issues for bullet in issue["bullets"]])
+
+
+def default_editor_handler(bullets):
+    """No top stories, so tests that are not about the editor see the briefing they always did."""
+    return EditorPlan(stories=[])
+
+
 class FakeOpenAI:
     """Answers classification and briefing calls with handlers that tests can swap."""
 
-    def __init__(self, handler=default_handler, summary_handler=default_summary_handler):
+    def __init__(self, handler=default_handler, summary_handler=default_summary_handler,
+                 fact_check_handler=default_fact_check_handler, editor_handler=default_editor_handler):
         self.handler = handler
         self.summary_handler = summary_handler
+        self.fact_check_handler = fact_check_handler
+        self.editor_handler = editor_handler
         self.calls = []
         self.responses = self
 
@@ -121,11 +136,16 @@ class FakeOpenAI:
         data = json.loads(kwargs["input"])
         if kwargs["text_format"] is ClassificationBatch:
             result = self.handler(data["messages"])
+        elif kwargs["text_format"] is FactCheckBatch:
+            result = self.fact_check_handler(data["issues"])
+        elif kwargs["text_format"] is EditorPlan:
+            result = self.editor_handler(data["bullets"])
         else:
             result = self.summary_handler(data["issues"])
         if asyncio.iscoroutine(result):
             result = await result
-        return fake_response(result) if isinstance(result, (ClassificationBatch, BriefingBatch)) else result
+        parsed_types = (ClassificationBatch, BriefingBatch, FactCheckBatch, EditorPlan)
+        return fake_response(result) if isinstance(result, parsed_types) else result
 
 
 def sent_items(fake_openai):

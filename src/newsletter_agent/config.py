@@ -35,8 +35,10 @@ DEFAULT_CONFIG: dict[str, Any] = {
         "categories": ["editorial_newsletter"],
         "include": [],  # Publication names to keep; empty keeps all.
         "exclude": [],  # Publication names to skip.
-        "max_model_calls": 30,
-        "max_tokens": 300_000,
+        "fact_check": True,  # A second model pass removes bullets the email text does not support.
+        "top_stories": True,  # An editor pass merges the same story across newsletters and ranks the top ones.
+        "max_model_calls": 60,  # Shared by classifying new mail, summaries, the fact-check and top stories.
+        "max_tokens": 600_000,
         "auto_approve": False,  # Only `newsletter-agent schedule` turns this on, after asking.
     },
 }

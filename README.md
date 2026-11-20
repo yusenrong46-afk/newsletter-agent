@@ -10,6 +10,8 @@ It runs on your own computer, reads Gmail read-only through a local [MCP](https:
 
 **[→ See the live demo report](https://yusenrong46-afk.github.io/newsletter-agent/)** · [demo briefing](https://yusenrong46-afk.github.io/newsletter-agent/briefing.html). Both are built from a synthetic mailbox by CI.
 
+**New in 0.3:** the briefing is now written by a small team of model roles (summarize → fact-check → edit), each one's answer checked by Python. See [docs/architecture.md](docs/architecture.md#the-briefing-team).
+
 **New in 0.2:** about 6× faster first scans, a SQLite store, Windows and Linux support, a measured accuracy eval, and cleanup suggestions. See the [animated before/after report](docs/upgrade-report.html) ([live](https://yusenrong46-afk.github.io/newsletter-agent/upgrade-report.html)).
 
 ![Demo inventory report](docs/images/report.png)
@@ -18,7 +20,7 @@ It runs on your own computer, reads Gmail read-only through a local [MCP](https:
 
 - **Inventory:** scans 90 days of mail, including archived mail, and reports each newsletter or subscription with how much it sends, how much sits unread, and a weekly trend.
 - **Cleanup suggestions:** points out newsletters you mostly don't open ("15 received, 14 still unread"). It only suggests; it never unsubscribes or changes anything.
-- **Briefing:** each morning, summarizes only *new* editorial newsletters. Every bullet cites the email it came from.
+- **Briefing:** each morning, summarizes only *new* editorial newsletters. Every bullet cites the email it came from. A second pass fact-checks each bullet against its email and removes unsupported ones, and a third merges the same story from several newsletters into "top stories".
 - **Chat:** answers questions like "what do I get most?" or "summarize Byte Garden from this week."
 - **Safety:** before anything costs money, it shows a free preflight with the scope and a token estimate, asks for approval, and enforces a hard budget.
 
@@ -104,6 +106,7 @@ The model's only job is to label messages (newsletter, promotion, receipt…) an
   - by List-ID, otherwise by exact sender address, never by domain;
   - two newsletters on the same delivery service stay separate;
   - same-name groups are flagged, not merged.
+- **Several model roles, one conductor.** The briefing's summarizer, fact-checker and editor run in a fixed order chosen by Python, not by a model, and share one budget. No agent framework: three steps do not need one, and each role has the same state-in, state-out shape if that changes.
 - **Paid work is explicit:**
   - a free preflight, then one approval, then a hard per-run budget;
   - partial results on interruption, and `--resume` without double counting;

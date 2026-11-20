@@ -174,3 +174,60 @@ def test_a_category_the_model_never_predicts_counts_as_zero_in_macro_f1():
     assert result["per_category"]["editorial_newsletter"]["f1"] == 0.6667
     assert result["macro_f1"] == 0.3333  # Was 0.6667: the failed category was silently left out.
     assert result["per_category"]["uncertain"]["f1"] is None  # No examples: still not scored.
+
+
+# --- The briefing team's scores ----------------------------------------------------------------
+
+def test_fact_check_scores_match_a_hand_computed_example():
+    from newsletter_agent.evaluate import score_fact_check
+
+    expected = {"b1": True, "b2": True, "b3": False, "b4": False, "b5": False}
+    verdicts = {"b1": "supported", "b2": "unsupported", "b3": "unsupported", "b4": "supported", "b5": "unchecked"}
+    result = score_fact_check(expected, verdicts)
+    assert (result["errors_caught"], result["errors_missed"], result["catch_rate"]) == (1, 2, 0.3333)
+    assert (result["true_bullets_wrongly_removed"], result["wrongly_removed_rate"]) == (1, 0.5)
+    assert result["unchecked"] == 1  # An unchecked planted error counts as missed, never as caught.
+
+
+def test_grouping_scores_match_a_hand_computed_example():
+    from newsletter_agent.evaluate import score_grouping
+
+    labels = {"b1": "x", "b2": "x", "b3": "x", "b4": "y", "b5": "y", "b6": None}
+    # The editor grouped two of the three "x" bullets, and wrongly put a "y" bullet with a single.
+    result = score_grouping(labels, [["b1", "b2"], ["b4", "b6"], ["b3"]])
+    assert (result["true_pairs"], result["predicted_pairs"], result["correct_pairs"]) == (4, 2, 1)
+    assert (result["precision"], result["recall"], result["f1"]) == (0.5, 0.25, 0.3333)
+    assert result["shared_stories_found_exactly"] == 0
+    assert score_grouping(labels, [])["f1"] == 0.0  # Grouping nothing is a failure, not "n/a".
+    assert score_grouping(labels, [["b1", "b2", "b3"], ["b4", "b5"]])["shared_stories_found_exactly"] == 2
+
+
+def test_the_team_eval_runs_the_real_roles_and_offline_scores_do_not_regress(tmp_path):
+    from newsletter_agent.evaluate import load_team_cases, run_team_eval
+
+    cases = load_team_cases()
+    planted = sum(1 for case in cases["fact_check"] for bullet in case["bullets"] if not bullet["supported"])
+    assert planted >= 10 and len({item["story"] for item in cases["editor"]} - {None}) == 3
+
+    model = OfflineModel()
+    result = run_team_eval(lambda: model)
+    assert result["fact_check"]["status"] == "done" and result["fact_check"]["unchecked"] == 0
+    assert result["fact_check"]["catch_rate"] >= 0.7 and result["fact_check"]["wrongly_removed_rate"] <= 0.15
+    assert result["editor"]["status"] == "done" and result["editor"]["f1"] >= 0.8
+    assert result["editor"]["precision"] == 1.0  # The stand-in never merges different stories.
+
+
+def test_a_team_eval_without_budget_reports_unchecked_bullets_not_a_score_of_zero_errors():
+    from newsletter_agent.evaluate import run_team_eval
+
+    result = run_team_eval(lambda: OfflineModel(), max_model_calls=0)
+    assert result["fact_check"]["status"] == "incomplete"
+    assert result["fact_check"]["unchecked"] == result["fact_check"]["bullets"]
+    assert result["fact_check"]["errors_caught"] == 0 and result["editor"]["status"] == "incomplete"
+
+
+def test_the_eval_command_saves_the_team_scores(tmp_path):
+    assert cli.main(["eval", "--output", str(tmp_path)]) == 0
+    saved = json.loads(next(tmp_path.glob("offline-*.json")).read_text(encoding="utf-8"))
+    assert saved["briefing_team"]["fact_check"]["planted_errors"] == 12
+    assert "Briefing team" in next(tmp_path.glob("offline-*.html")).read_text(encoding="utf-8")

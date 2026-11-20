@@ -24,6 +24,7 @@ from types import SimpleNamespace
 
 from . import config
 from .briefing import BriefingBatch, SummaryBullet, run_briefing
+from .briefing_team import MAX_TOP_STORIES, BulletVerdict, EditorPlan, FactCheckBatch, Story
 from .classify import Category, ClassificationBatch, MessageClassification, ModelClient
 from .gmail_client import GmailMcpClient
 from .gmail_server import build_mcp_server
@@ -265,6 +266,36 @@ def summarize_offline(issue: dict) -> list[str]:
     return [first_sentence[:200]] if first_sentence else []
 
 
+def content_words(text: str) -> set[str]:
+    """Words of 4+ letters and all numbers, lower-cased: enough for the offline stand-ins below."""
+    return {word for word in re.findall(r"[a-z]{4,}|\d[\d.,%]*", text.lower())}
+
+
+def supported_offline(bullet: str, source: str) -> bool:
+    """Offline fact-check: most of the bullet's content words appear in the source."""
+    words = content_words(bullet)
+    return bool(words) and len(words & content_words(source)) / len(words) >= 0.7
+
+
+def edit_offline(bullets: list[dict]) -> list[Story]:
+    """Offline editor: bullets from different newsletters that share most words are one story."""
+    groups: list[list[dict]] = []
+    for bullet in bullets:
+        words = content_words(bullet["text"])
+        for group in groups:
+            first = content_words(group[0]["text"])
+            same_story = words and first and len(words & first) / min(len(words), len(first)) >= 0.3
+            if same_story and all(member["publication"] != bullet["publication"] for member in group):
+                group.append(bullet)
+                break
+        else:
+            groups.append([bullet])
+    groups.sort(key=lambda group: -len(group))  # Stories several newsletters cover come first; ties keep their order.
+    limit = MAX_TOP_STORIES if len(groups[0]) > 1 else 3
+    return [Story(headline=" ".join(group[0]["text"].split()[:10]).rstrip(".,;:"),
+                  bullet_ids=[member["bullet_id"] for member in group]) for group in groups[:limit]]
+
+
 class OfflineModel:
     """Has the same `responses.parse` shape as the OpenAI client, but runs locally."""
 
@@ -277,9 +308,15 @@ class OfflineModel:
 
         self.calls += 1
         data = json.loads(input)
-        parsed: ClassificationBatch | BriefingBatch
+        parsed: ClassificationBatch | BriefingBatch | FactCheckBatch | EditorPlan
         if text_format is ClassificationBatch:
             parsed = ClassificationBatch(classifications=[classify_offline(item) for item in data["messages"]])
+        elif text_format is FactCheckBatch:
+            parsed = FactCheckBatch(verdicts=[
+                BulletVerdict(bullet_id=bullet["bullet_id"], supported=supported_offline(bullet["text"], issue["text"]))
+                for issue in data["issues"] for bullet in issue["bullets"]])
+        elif text_format is EditorPlan:
+            parsed = EditorPlan(stories=edit_offline(data["bullets"]))
         else:
             parsed = BriefingBatch(bullets=[SummaryBullet(source_message_id=issue["id"], text=text)
                                             for issue in data["issues"] for text in summarize_offline(issue)])

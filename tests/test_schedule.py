@@ -93,7 +93,7 @@ def test_macos_consent_installs_and_unschedule_removes(home, monkeypatch):
     on(monkeypatch, "darwin")
     runner, questions = FakeRunner(), []
     schedule.install_schedule("07:00", ask=lambda q: questions.append(q) or True, run_command=runner)
-    assert "send newsletter text to OpenAI" in questions[0] and "300,000 tokens" in questions[0]
+    assert "send newsletter text to OpenAI" in questions[0] and "600,000 tokens" in questions[0]
     assert schedule.plist_path().exists() and schedule.is_scheduled()
     assert auto_approve()
     assert runner.commands[-1][:2] == ["launchctl", "bootstrap"]
