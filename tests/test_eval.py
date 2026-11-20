@@ -162,3 +162,15 @@ def test_a_declined_real_model_eval_saves_nothing_and_keeps_earlier_results(tmp_
     assert run_eval_command(real_model=True, output=str(tmp_path)) == 2  # Not approved, not interactive.
     assert "--yes" in capsys.readouterr().out
     assert [path.name for path in tmp_path.iterdir()] == ["gpt-6-luna-earlier.json"]  # No zero-score "result".
+
+
+def test_a_category_the_model_never_predicts_counts_as_zero_in_macro_f1():
+    """From the PR review: one right newsletter, one receipt wrongly called a newsletter."""
+    cases = [case("a", "editorial_newsletter"), case("b", "transactional")]
+    outcome = {"a": "editorial_newsletter", "b": "editorial_newsletter"}
+    result = score(cases, outcome, {"a": "bulk", "b": "bulk"})
+    transactional = result["per_category"]["transactional"]
+    assert (transactional["precision"], transactional["recall"], transactional["f1"]) == (None, 0.0, 0.0)
+    assert result["per_category"]["editorial_newsletter"]["f1"] == 0.6667
+    assert result["macro_f1"] == 0.3333  # Was 0.6667: the failed category was silently left out.
+    assert result["per_category"]["uncertain"]["f1"] is None  # No examples: still not scored.

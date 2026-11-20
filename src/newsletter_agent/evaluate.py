@@ -158,8 +158,11 @@ def score(cases: list[dict], outcome: dict[str, str], triage: dict[str, str],
         predicted = sum(confusion[expected][category] for expected in ALL_CATEGORIES)
         reached = sum(count for column, count in confusion[category].items() if column != "not_sent")
         precision, recall = ratio(true_positive, predicted), ratio(true_positive, reached)
+        # A category with examples that the model never predicts has failed completely: its F1 is 0,
+        # not "n/a", or macro F1 would leave it out and look better than it is.
+        score_f1 = 0.0 if reached and not predicted else f1(precision, recall)
         per_category[category] = {"support": reached, "predicted": predicted, "precision": precision,
-                                  "recall": recall, "f1": f1(precision, recall)}
+                                  "recall": recall, "f1": score_f1}
     scored = [values["f1"] for values in per_category.values() if values["support"] and values["f1"] is not None]
 
     reached_model = [item for item in cases if outcome[item["id"]] != "not_sent"]
