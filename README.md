@@ -10,6 +10,8 @@ It runs on your own computer, reads Gmail read-only through a local [MCP](https:
 
 **[→ See the live demo report](https://yusenrong46-afk.github.io/newsletter-agent/)** · [demo briefing](https://yusenrong46-afk.github.io/newsletter-agent/briefing.html). Both are built from a synthetic mailbox by CI.
 
+**Measured accuracy** (gpt-6-luna, 5 runs on invented emails): 98.9% of clear-cut emails in the right category (96.8% to 100% across runs), and 90.3% on a harder set of borderline cases (95.0% when other reasonable labels count). Details in [docs/architecture.md](docs/architecture.md#measuring-quality).
+
 **New in 0.3:** the briefing is now written by a small team of model roles (summarize → fact-check → edit), each one's answer checked by Python. See [docs/architecture.md](docs/architecture.md#the-briefing-team).
 
 **New in 0.2:** about 6× faster first scans, a SQLite store, Windows and Linux support, a measured accuracy eval, and cleanup suggestions. See the [animated before/after report](docs/upgrade-report.html) ([live](https://yusenrong46-afk.github.io/newsletter-agent/upgrade-report.html)).
@@ -70,7 +72,7 @@ You bring your own Google OAuth client and OpenAI key, so your email never passe
 | `schedule HH:MM` / `unschedule` | Daily briefing (launchd, systemd timer or Task Scheduler), after explicit consent |
 | `chat` | Asks about your newsletters |
 | `demo [--open] [--real-model]` | Synthetic mailbox, real pipeline |
-| `eval [--real-model]` | Scores classification on 96 labelled synthetic emails |
+| `eval [--real-model] [--runs N]` | Scores the AI on invented emails with known answers: a standard set, a harder set, and the briefing team. `--runs` repeats it and reports the mean and range |
 
 ## How it works
 

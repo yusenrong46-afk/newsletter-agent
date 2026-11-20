@@ -1,0 +1,1023 @@
+{
+ "label": "gpt-6-luna",
+ "model": "gpt-6-luna",
+ "generated_at": "2026-11-20T15:05:22+00:00",
+ "dataset": {
+  "cases": 96,
+  "by_label": {
+   "editorial_newsletter": 38,
+   "product_update": 11,
+   "transactional": 20,
+   "promotional_subscription": 20,
+   "personal_or_other": 7
+  },
+  "by_source": {
+   "demo": 56,
+   "hard": 40
+  }
+ },
+ "status": "complete",
+ "complete": true,
+ "cases": 96,
+ "subscription_detection": {
+  "true_positive": 66,
+  "false_positive": 0,
+  "false_negative": 3,
+  "true_negative": 27,
+  "precision": 1.0,
+  "recall": 0.9565,
+  "f1": 0.9778,
+  "accuracy": 0.9688
+ },
+ "category_accuracy": 0.9677,
+ "lenient_category_accuracy": 0.9677,
+ "macro_f1": 0.9684,
+ "per_category": {
+  "editorial_newsletter": {
+   "support": 38,
+   "predicted": 38,
+   "precision": 1.0,
+   "recall": 1.0,
+   "f1": 1.0
+  },
+  "promotional_subscription": {
+   "support": 20,
+   "predicted": 20,
+   "precision": 1.0,
+   "recall": 1.0,
+   "f1": 1.0
+  },
+  "product_update": {
+   "support": 11,
+   "predicted": 8,
+   "precision": 1.0,
+   "recall": 0.7273,
+   "f1": 0.8421
+  },
+  "transactional": {
+   "support": 20,
+   "predicted": 20,
+   "precision": 1.0,
+   "recall": 1.0,
+   "f1": 1.0
+  },
+  "personal_or_other": {
+   "support": 4,
+   "predicted": 4,
+   "precision": 1.0,
+   "recall": 1.0,
+   "f1": 1.0
+  },
+  "uncertain": {
+   "support": 0,
+   "predicted": 3,
+   "precision": 0.0,
+   "recall": null,
+   "f1": null
+  }
+ },
+ "confusion": {
+  "editorial_newsletter": {
+   "editorial_newsletter": 38,
+   "promotional_subscription": 0,
+   "product_update": 0,
+   "transactional": 0,
+   "personal_or_other": 0,
+   "uncertain": 0,
+   "unresolved": 0,
+   "pending": 0,
+   "not_sent": 0
+  },
+  "promotional_subscription": {
+   "editorial_newsletter": 0,
+   "promotional_subscription": 20,
+   "product_update": 0,
+   "transactional": 0,
+   "personal_or_other": 0,
+   "uncertain": 0,
+   "unresolved": 0,
+   "pending": 0,
+   "not_sent": 0
+  },
+  "product_update": {
+   "editorial_newsletter": 0,
+   "promotional_subscription": 0,
+   "product_update": 8,
+   "transactional": 0,
+   "personal_or_other": 0,
+   "uncertain": 3,
+   "unresolved": 0,
+   "pending": 0,
+   "not_sent": 0
+  },
+  "transactional": {
+   "editorial_newsletter": 0,
+   "promotional_subscription": 0,
+   "product_update": 0,
+   "transactional": 20,
+   "personal_or_other": 0,
+   "uncertain": 0,
+   "unresolved": 0,
+   "pending": 0,
+   "not_sent": 0
+  },
+  "personal_or_other": {
+   "editorial_newsletter": 0,
+   "promotional_subscription": 0,
+   "product_update": 0,
+   "transactional": 0,
+   "personal_or_other": 4,
+   "uncertain": 0,
+   "unresolved": 0,
+   "pending": 0,
+   "not_sent": 3
+  },
+  "uncertain": {
+   "editorial_newsletter": 0,
+   "promotional_subscription": 0,
+   "product_update": 0,
+   "transactional": 0,
+   "personal_or_other": 0,
+   "uncertain": 0,
+   "unresolved": 0,
+   "pending": 0,
+   "not_sent": 0
+  }
+ },
+ "triage": {
+  "tiers": {
+   "bulk": 87,
+   "not_candidate": 3,
+   "recurring": 6
+  },
+  "subscriptions_reaching_model": 1.0,
+  "personal_kept_from_model_or_headers_only": 0.8571
+ },
+ "unresolved_rate": 0.0,
+ "publication_name_accuracy": 1.0,
+ "mistakes": [
+  {
+   "id": "hard-analytics-0",
+   "subject": "Your weekly site report: week 22",
+   "expected": "product_update",
+   "predicted": "uncertain",
+   "note": "Automated weekly report with no list headers; headers only",
+   "acceptable": false
+  },
+  {
+   "id": "hard-analytics-1",
+   "subject": "Your weekly site report: week 21",
+   "expected": "product_update",
+   "predicted": "uncertain",
+   "note": "Automated weekly report with no list headers; headers only",
+   "acceptable": false
+  },
+  {
+   "id": "hard-analytics-2",
+   "subject": "Your weekly site report: week 20",
+   "expected": "product_update",
+   "predicted": "uncertain",
+   "note": "Automated weekly report with no list headers; headers only",
+   "acceptable": false
+  }
+ ],
+ "clear_mistakes": 3,
+ "answers": {
+  "demo-field-html": "editorial_newsletter",
+  "demo-field000": "editorial_newsletter",
+  "demo-field001": "editorial_newsletter",
+  "demo-field002": "editorial_newsletter",
+  "demo-field003": "editorial_newsletter",
+  "demo-field004": "editorial_newsletter",
+  "demo-field005": "editorial_newsletter",
+  "demo-forge000": "product_update",
+  "demo-forge001": "product_update",
+  "demo-forge002": "product_update",
+  "demo-garden000": "editorial_newsletter",
+  "demo-garden001": "editorial_newsletter",
+  "demo-garden002": "editorial_newsletter",
+  "demo-garden003": "editorial_newsletter",
+  "demo-garden004": "editorial_newsletter",
+  "demo-garden005": "editorial_newsletter",
+  "demo-lantern000": "transactional",
+  "demo-lantern001": "transactional",
+  "demo-lantern002": "transactional",
+  "demo-lantern003": "transactional",
+  "demo-lantern004": "transactional",
+  "demo-lantern005": "transactional",
+  "demo-ledger-long": "editorial_newsletter",
+  "demo-ledger000": "editorial_newsletter",
+  "demo-ledger001": "editorial_newsletter",
+  "demo-ledger002": "editorial_newsletter",
+  "demo-ledger003": "editorial_newsletter",
+  "demo-ledger004": "editorial_newsletter",
+  "demo-ledger005": "editorial_newsletter",
+  "demo-maple000": "promotional_subscription",
+  "demo-maple001": "promotional_subscription",
+  "demo-maple002": "promotional_subscription",
+  "demo-maple003": "promotional_subscription",
+  "demo-maple004": "promotional_subscription",
+  "demo-maple005": "promotional_subscription",
+  "demo-orbit-injection": "editorial_newsletter",
+  "demo-orbit000": "editorial_newsletter",
+  "demo-orbit001": "editorial_newsletter",
+  "demo-orbit002": "editorial_newsletter",
+  "demo-orbit003": "editorial_newsletter",
+  "demo-orbit004": "editorial_newsletter",
+  "demo-orbit005": "editorial_newsletter",
+  "demo-sam000": "not_sent",
+  "demo-sam001": "not_sent",
+  "demo-trail000": "promotional_subscription",
+  "demo-trail001": "promotional_subscription",
+  "demo-trail002": "promotional_subscription",
+  "demo-trail003": "promotional_subscription",
+  "demo-trail004": "promotional_subscription",
+  "demo-trail005": "promotional_subscription",
+  "demo-trailorder000": "transactional",
+  "demo-trailorder001": "transactional",
+  "demo-trailorder002": "transactional",
+  "demo-trailorder003": "transactional",
+  "demo-trailorder004": "transactional",
+  "demo-trailorder005": "transactional",
+  "hard-garden-receipt": "transactional",
+  "hard-ledger-password": "transactional",
+  "hard-shipping-footer": "transactional",
+  "hard-security-alert": "transactional",
+  "hard-event-ticket": "transactional",
+  "hard-friend-platform": "personal_or_other",
+  "hard-colleague-invite": "not_sent",
+  "hard-jordan-0": "personal_or_other",
+  "hard-jordan-1": "personal_or_other",
+  "hard-jordan-2": "personal_or_other",
+  "hard-analytics-0": "uncertain",
+  "hard-analytics-1": "uncertain",
+  "hard-analytics-2": "uncertain",
+  "hard-policy-update": "product_update",
+  "hard-feature-launch": "product_update",
+  "hard-upgrade-promo": "promotional_subscription",
+  "hard-version-3": "product_update",
+  "hard-webinar": "promotional_subscription",
+  "hard-charity-appeal": "promotional_subscription",
+  "hard-editorial-sale-word": "editorial_newsletter",
+  "hard-brand-story": "promotional_subscription",
+  "hard-spanish": "editorial_newsletter",
+  "hard-german": "editorial_newsletter",
+  "hard-french": "editorial_newsletter",
+  "hard-japanese": "editorial_newsletter",
+  "hard-injection-promo": "promotional_subscription",
+  "hard-injection-receipt": "transactional",
+  "hard-html-promo": "promotional_subscription",
+  "hard-html-editorial": "editorial_newsletter",
+  "hard-empty-digest": "editorial_newsletter",
+  "hard-forum-digest": "editorial_newsletter",
+  "hard-news-digest": "editorial_newsletter",
+  "hard-podcast-notes": "editorial_newsletter",
+  "hard-recipe-letter": "editorial_newsletter",
+  "hard-loyalty-points": "promotional_subscription",
+  "hard-subscription-renewal": "transactional",
+  "hard-2fa-code": "transactional",
+  "hard-flash-sale": "promotional_subscription",
+  "hard-app-changelog": "product_update",
+  "hard-service-outage": "product_update"
+ },
+ "usage": {
+  "model_calls": 4,
+  "input_tokens": 10463,
+  "output_tokens": 4229,
+  "total_tokens": 14692,
+  "tokens_per_1000_emails": 153042
+ },
+ "ship_bar": {
+  "metric": "subscription_detection.f1",
+  "minimum": 0.9,
+  "met": true
+ },
+ "hard": {
+  "label": "gpt-6-luna",
+  "model": "gpt-6-luna",
+  "generated_at": "2026-11-20T15:05:45+00:00",
+  "dataset": {
+   "cases": 65,
+   "by_label": {
+    "transactional": 14,
+    "promotional_subscription": 11,
+    "editorial_newsletter": 24,
+    "product_update": 8,
+    "personal_or_other": 8
+   },
+   "by_source": {
+    "harder": 65
+   }
+  },
+  "status": "complete",
+  "complete": true,
+  "cases": 65,
+  "subscription_detection": {
+   "true_positive": 37,
+   "false_positive": 1,
+   "false_negative": 6,
+   "true_negative": 21,
+   "precision": 0.9737,
+   "recall": 0.8605,
+   "f1": 0.9136,
+   "accuracy": 0.8923
+  },
+  "category_accuracy": 0.9,
+  "lenient_category_accuracy": 0.95,
+  "macro_f1": 0.881,
+  "per_category": {
+   "editorial_newsletter": {
+    "support": 21,
+    "predicted": 22,
+    "precision": 0.9545,
+    "recall": 1.0,
+    "f1": 0.9767
+   },
+   "promotional_subscription": {
+    "support": 11,
+    "predicted": 10,
+    "precision": 0.9,
+    "recall": 0.8182,
+    "f1": 0.8572
+   },
+   "product_update": {
+    "support": 8,
+    "predicted": 6,
+    "precision": 1.0,
+    "recall": 0.75,
+    "f1": 0.8571
+   },
+   "transactional": {
+    "support": 14,
+    "predicted": 14,
+    "precision": 0.8571,
+    "recall": 0.8571,
+    "f1": 0.8571
+   },
+   "personal_or_other": {
+    "support": 6,
+    "predicted": 8,
+    "precision": 0.75,
+    "recall": 1.0,
+    "f1": 0.8571
+   },
+   "uncertain": {
+    "support": 0,
+    "predicted": 0,
+    "precision": null,
+    "recall": null,
+    "f1": null
+   }
+  },
+  "confusion": {
+   "editorial_newsletter": {
+    "editorial_newsletter": 21,
+    "promotional_subscription": 0,
+    "product_update": 0,
+    "transactional": 0,
+    "personal_or_other": 0,
+    "uncertain": 0,
+    "unresolved": 0,
+    "pending": 0,
+    "not_sent": 3
+   },
+   "promotional_subscription": {
+    "editorial_newsletter": 0,
+    "promotional_subscription": 9,
+    "product_update": 0,
+    "transactional": 1,
+    "personal_or_other": 1,
+    "uncertain": 0,
+    "unresolved": 0,
+    "pending": 0,
+    "not_sent": 0
+   },
+   "product_update": {
+    "editorial_newsletter": 0,
+    "promotional_subscription": 1,
+    "product_update": 6,
+    "transactional": 1,
+    "personal_or_other": 0,
+    "uncertain": 0,
+    "unresolved": 0,
+    "pending": 0,
+    "not_sent": 0
+   },
+   "transactional": {
+    "editorial_newsletter": 1,
+    "promotional_subscription": 0,
+    "product_update": 0,
+    "transactional": 12,
+    "personal_or_other": 1,
+    "uncertain": 0,
+    "unresolved": 0,
+    "pending": 0,
+    "not_sent": 0
+   },
+   "personal_or_other": {
+    "editorial_newsletter": 0,
+    "promotional_subscription": 0,
+    "product_update": 0,
+    "transactional": 0,
+    "personal_or_other": 6,
+    "uncertain": 0,
+    "unresolved": 0,
+    "pending": 0,
+    "not_sent": 2
+   },
+   "uncertain": {
+    "editorial_newsletter": 0,
+    "promotional_subscription": 0,
+    "product_update": 0,
+    "transactional": 0,
+    "personal_or_other": 0,
+    "uncertain": 0,
+    "unresolved": 0,
+    "pending": 0,
+    "not_sent": 0
+   }
+  },
+  "triage": {
+   "tiers": {
+    "bulk": 51,
+    "not_candidate": 5,
+    "recurring": 9
+   },
+   "subscriptions_reaching_model": 0.9302,
+   "personal_kept_from_model_or_headers_only": 0.625
+  },
+  "unresolved_rate": 0.0,
+  "publication_name_accuracy": null,
+  "mistakes": [
+   {
+    "id": "x-welcome",
+    "subject": "Welcome to The Shelf! Here's what to expect",
+    "expected": "transactional",
+    "predicted": "editorial_newsletter",
+    "note": "Welcome email: a one-off event, sent by a newsletter",
+    "acceptable": true
+   },
+   {
+    "id": "x-survey",
+    "subject": "How did we do? Rate your recent order",
+    "expected": "transactional",
+    "predicted": "personal_or_other",
+    "note": "Post-purchase survey",
+    "acceptable": false
+   },
+   {
+    "id": "x-price-drop",
+    "subject": "Price drop on an item in your wishlist",
+    "expected": "promotional_subscription",
+    "predicted": "transactional",
+    "note": "",
+    "acceptable": false
+   },
+   {
+    "id": "x-sales-personal",
+    "subject": "Quick question",
+    "expected": "promotional_subscription",
+    "predicted": "personal_or_other",
+    "note": "Automated sales email written like a personal note",
+    "acceptable": true
+   },
+   {
+    "id": "x-usage-report",
+    "subject": "Your May storage report",
+    "expected": "product_update",
+    "predicted": "transactional",
+    "note": "",
+    "acceptable": true
+   },
+   {
+    "id": "x-tips",
+    "subject": "5 tips to get more from Notewell",
+    "expected": "product_update",
+    "predicted": "promotional_subscription",
+    "note": "",
+    "acceptable": false
+   },
+   {
+    "id": "x-solo-letter",
+    "subject": "Letter no. 7: on keeping a notebook",
+    "expected": "editorial_newsletter",
+    "predicted": "not_sent",
+    "note": "No bulk signal and only one email: never sent to the model",
+    "acceptable": false
+   },
+   {
+    "id": "x-pair-letter-0",
+    "subject": "Small Boats, issue 12",
+    "expected": "editorial_newsletter",
+    "predicted": "not_sent",
+    "note": "No bulk signal and only two emails: never sent to the model",
+    "acceptable": false
+   },
+   {
+    "id": "x-pair-letter-1",
+    "subject": "Small Boats, issue 11",
+    "expected": "editorial_newsletter",
+    "predicted": "not_sent",
+    "note": "No bulk signal and only two emails: never sent to the model",
+    "acceptable": false
+   }
+  ],
+  "clear_mistakes": 6,
+  "answers": {
+   "x-order-recs": "transactional",
+   "x-confirm-subscription": "transactional",
+   "x-welcome": "editorial_newsletter",
+   "x-platform-receipt": "transactional",
+   "x-renewal-upsell": "promotional_subscription",
+   "x-survey": "personal_or_other",
+   "x-abandoned-cart": "promotional_subscription",
+   "x-price-drop": "transactional",
+   "x-event-reminder": "transactional",
+   "x-refund": "transactional",
+   "x-data-notice": "transactional",
+   "x-webinar-replay": "transactional",
+   "x-sales-personal": "personal_or_other",
+   "x-fake-reply": "promotional_subscription",
+   "x-content-marketing": "editorial_newsletter",
+   "x-advertorial": "promotional_subscription",
+   "x-nonprofit-news": "editorial_newsletter",
+   "x-petition": "promotional_subscription",
+   "x-referral": "promotional_subscription",
+   "x-birthday": "promotional_subscription",
+   "x-inject-footer": "promotional_subscription",
+   "x-inject-new-id": "promotional_subscription",
+   "x-api-shutdown": "product_update",
+   "x-incident-resolved": "product_update",
+   "x-job-alert": "product_update",
+   "x-social-digest": "product_update",
+   "x-usage-report": "transactional",
+   "x-beta-invite": "product_update",
+   "x-terse-changelog": "product_update",
+   "x-tips": "promotional_subscription",
+   "x-community-roundup": "editorial_newsletter",
+   "x-label-only": "editorial_newsletter",
+   "x-sponsor-first": "editorial_newsletter",
+   "x-number-subject": "editorial_newsletter",
+   "x-emoji-subject": "editorial_newsletter",
+   "x-allcaps": "editorial_newsletter",
+   "x-link-roundup": "editorial_newsletter",
+   "x-paywall-teaser": "editorial_newsletter",
+   "x-portuguese": "editorial_newsletter",
+   "x-korean": "editorial_newsletter",
+   "x-mixed-language": "editorial_newsletter",
+   "x-long-essay": "editorial_newsletter",
+   "x-poem": "editorial_newsletter",
+   "x-no-subject": "editorial_newsletter",
+   "x-inject-json": "editorial_newsletter",
+   "x-inject-hidden-html": "editorial_newsletter",
+   "x-family-list": "personal_or_other",
+   "x-dev-list": "personal_or_other",
+   "x-auto-reply": "personal_or_other",
+   "x-bounce": "transactional",
+   "x-inject-polite": "transactional",
+   "x-calendar-invite": "not_sent",
+   "x-forwarded": "not_sent",
+   "x-recruiter-0": "personal_or_other",
+   "x-recruiter-1": "personal_or_other",
+   "x-recruiter-2": "personal_or_other",
+   "x-rent-0": "transactional",
+   "x-rent-1": "transactional",
+   "x-rent-2": "transactional",
+   "x-club-0": "editorial_newsletter",
+   "x-club-1": "editorial_newsletter",
+   "x-club-2": "editorial_newsletter",
+   "x-solo-letter": "not_sent",
+   "x-pair-letter-0": "not_sent",
+   "x-pair-letter-1": "not_sent"
+  },
+  "usage": {
+   "model_calls": 3,
+   "input_tokens": 7285,
+   "output_tokens": 2689,
+   "total_tokens": 9974,
+   "tokens_per_1000_emails": 153446
+  },
+  "ship_bar": {
+   "metric": "subscription_detection.f1",
+   "minimum": 0.9,
+   "met": true
+  }
+ },
+ "briefing_team": {
+  "fact_check": {
+   "bullets": 34,
+   "planted_errors": 12,
+   "errors_caught": 12,
+   "errors_missed": 0,
+   "catch_rate": 1.0,
+   "true_bullets": 22,
+   "true_bullets_wrongly_removed": 0,
+   "wrongly_removed_rate": 0.0,
+   "unchecked": 0,
+   "status": "done"
+  },
+  "editor": {
+   "bullets": 14,
+   "shared_stories": 3,
+   "shared_stories_found_exactly": 3,
+   "true_pairs": 5,
+   "predicted_pairs": 5,
+   "correct_pairs": 5,
+   "precision": 1.0,
+   "recall": 1.0,
+   "f1": 1.0,
+   "top_stories": 5,
+   "status": "done",
+   "headlines": [
+    "Central bank holds its main rate at 4.25%",
+    "Quill 1.0 launches with a new plugin system",
+    "Selene-3 detects water ice near the Moon’s south pole",
+    "Marlow wetland bird count rises to 1,240",
+    "Council approves budget as bus fares rise 10 pence"
+   ]
+  },
+  "usage": {
+   "model_calls": 3,
+   "input_tokens": 2996,
+   "output_tokens": 507,
+   "total_tokens": 3503
+  }
+ },
+ "repeated": {
+  "runs": 5,
+  "sets": {
+   "standard": {
+    "runs": 5,
+    "complete_runs": 5,
+    "cases": 96,
+    "category_accuracy": {
+     "mean": 0.9892,
+     "min": 0.9677,
+     "max": 1.0,
+     "values": [
+      0.9677,
+      0.9892,
+      1.0,
+      1.0,
+      0.9892
+     ]
+    },
+    "lenient_category_accuracy": {
+     "mean": 0.9892,
+     "min": 0.9677,
+     "max": 1.0,
+     "values": [
+      0.9677,
+      0.9892,
+      1.0,
+      1.0,
+      0.9892
+     ]
+    },
+    "subscription_f1": {
+     "mean": 0.9926,
+     "min": 0.9778,
+     "max": 1.0,
+     "values": [
+      0.9778,
+      0.9927,
+      1.0,
+      1.0,
+      0.9927
+     ]
+    },
+    "macro_f1": {
+     "mean": 0.9858,
+     "min": 0.9684,
+     "max": 1.0,
+     "values": [
+      0.9684,
+      0.9751,
+      1.0,
+      1.0,
+      0.9856
+     ]
+    },
+    "unresolved_rate": {
+     "mean": 0.0,
+     "min": 0.0,
+     "max": 0.0,
+     "values": [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+     ]
+    },
+    "subscriptions_reaching_model": 1.0,
+    "total_tokens": 72967,
+    "stable_right": 91,
+    "always_wrong": [],
+    "changed_between_runs": [
+     {
+      "id": "hard-analytics-0",
+      "subject": "Your weekly site report: week 22",
+      "expected": "product_update",
+      "also_acceptable": [],
+      "answers": {
+       "uncertain": 1,
+       "product_update": 4
+      },
+      "acceptable_runs": 4,
+      "note": "Automated weekly report with no list headers; headers only"
+     },
+     {
+      "id": "hard-analytics-1",
+      "subject": "Your weekly site report: week 21",
+      "expected": "product_update",
+      "also_acceptable": [],
+      "answers": {
+       "uncertain": 1,
+       "product_update": 4
+      },
+      "acceptable_runs": 4,
+      "note": "Automated weekly report with no list headers; headers only"
+     },
+     {
+      "id": "hard-analytics-2",
+      "subject": "Your weekly site report: week 20",
+      "expected": "product_update",
+      "also_acceptable": [],
+      "answers": {
+       "uncertain": 1,
+       "product_update": 4
+      },
+      "acceptable_runs": 4,
+      "note": "Automated weekly report with no list headers; headers only"
+     },
+     {
+      "id": "hard-forum-digest",
+      "subject": "Your weekly forum digest: 12 new topics",
+      "expected": "editorial_newsletter",
+      "also_acceptable": [],
+      "answers": {
+       "editorial_newsletter": 4,
+       "personal_or_other": 1
+      },
+      "acceptable_runs": 4,
+      "note": ""
+     },
+     {
+      "id": "hard-service-outage",
+      "subject": "Scheduled maintenance on 8 June",
+      "expected": "product_update",
+      "also_acceptable": [],
+      "answers": {
+       "product_update": 4,
+       "transactional": 1
+      },
+      "acceptable_runs": 4,
+      "note": ""
+     }
+    ]
+   },
+   "hard": {
+    "runs": 5,
+    "complete_runs": 5,
+    "cases": 65,
+    "category_accuracy": {
+     "mean": 0.9033,
+     "min": 0.8833,
+     "max": 0.9333,
+     "values": [
+      0.9,
+      0.9333,
+      0.8833,
+      0.9,
+      0.9
+     ]
+    },
+    "lenient_category_accuracy": {
+     "mean": 0.95,
+     "min": 0.9333,
+     "max": 0.9667,
+     "values": [
+      0.95,
+      0.9667,
+      0.9333,
+      0.95,
+      0.95
+     ]
+    },
+    "subscription_f1": {
+     "mean": 0.9108,
+     "min": 0.9,
+     "max": 0.9268,
+     "values": [
+      0.9136,
+      0.9268,
+      0.9,
+      0.9136,
+      0.9
+     ]
+    },
+    "macro_f1": {
+     "mean": 0.8816,
+     "min": 0.8484,
+     "max": 0.9245,
+     "values": [
+      0.881,
+      0.9245,
+      0.8484,
+      0.8798,
+      0.8745
+     ]
+    },
+    "unresolved_rate": {
+     "mean": 0.0,
+     "min": 0.0,
+     "max": 0.0,
+     "values": [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+     ]
+    },
+    "subscriptions_reaching_model": 0.9302,
+    "total_tokens": 50118,
+    "stable_right": 55,
+    "always_wrong": [
+     {
+      "id": "x-survey",
+      "subject": "How did we do? Rate your recent order",
+      "expected": "transactional",
+      "also_acceptable": [
+       "promotional_subscription"
+      ],
+      "answers": {
+       "personal_or_other": 5
+      },
+      "acceptable_runs": 0,
+      "note": "Post-purchase survey"
+     },
+     {
+      "id": "x-solo-letter",
+      "subject": "Letter no. 7: on keeping a notebook",
+      "expected": "editorial_newsletter",
+      "also_acceptable": [],
+      "answers": {
+       "not_sent": 5
+      },
+      "acceptable_runs": 0,
+      "note": "No bulk signal and only one email: never sent to the model"
+     },
+     {
+      "id": "x-pair-letter-0",
+      "subject": "Small Boats, issue 12",
+      "expected": "editorial_newsletter",
+      "also_acceptable": [],
+      "answers": {
+       "not_sent": 5
+      },
+      "acceptable_runs": 0,
+      "note": "No bulk signal and only two emails: never sent to the model"
+     },
+     {
+      "id": "x-pair-letter-1",
+      "subject": "Small Boats, issue 11",
+      "expected": "editorial_newsletter",
+      "also_acceptable": [],
+      "answers": {
+       "not_sent": 5
+      },
+      "acceptable_runs": 0,
+      "note": "No bulk signal and only two emails: never sent to the model"
+     }
+    ],
+    "changed_between_runs": [
+     {
+      "id": "x-price-drop",
+      "subject": "Price drop on an item in your wishlist",
+      "expected": "promotional_subscription",
+      "also_acceptable": [
+       "product_update"
+      ],
+      "answers": {
+       "transactional": 3,
+       "promotional_subscription": 2
+      },
+      "acceptable_runs": 2,
+      "note": ""
+     },
+     {
+      "id": "x-petition",
+      "subject": "Sign now: save the Marlow wetland",
+      "expected": "promotional_subscription",
+      "also_acceptable": [],
+      "answers": {
+       "promotional_subscription": 2,
+       "personal_or_other": 3
+      },
+      "acceptable_runs": 2,
+      "note": "Campaign appeal"
+     },
+     {
+      "id": "x-job-alert",
+      "subject": "12 new jobs match your search",
+      "expected": "product_update",
+      "also_acceptable": [
+       "promotional_subscription"
+      ],
+      "answers": {
+       "product_update": 3,
+       "personal_or_other": 2
+      },
+      "acceptable_runs": 3,
+      "note": "Saved-search alert"
+     },
+     {
+      "id": "x-usage-report",
+      "subject": "Your May storage report",
+      "expected": "product_update",
+      "also_acceptable": [
+       "transactional"
+      ],
+      "answers": {
+       "transactional": 3,
+       "product_update": 2
+      },
+      "acceptable_runs": 5,
+      "note": ""
+     },
+     {
+      "id": "x-beta-invite",
+      "subject": "You're invited to the Notewell beta",
+      "expected": "product_update",
+      "also_acceptable": [
+       "promotional_subscription"
+      ],
+      "answers": {
+       "product_update": 4,
+       "promotional_subscription": 1
+      },
+      "acceptable_runs": 5,
+      "note": ""
+     },
+     {
+      "id": "x-tips",
+      "subject": "5 tips to get more from Notewell",
+      "expected": "product_update",
+      "also_acceptable": [
+       "editorial_newsletter"
+      ],
+      "answers": {
+       "promotional_subscription": 2,
+       "product_update": 3
+      },
+      "acceptable_runs": 3,
+      "note": ""
+     }
+    ]
+   }
+  },
+  "briefing_team": {
+   "runs": 5,
+   "complete_runs": 5,
+   "catch_rate": {
+    "mean": 1.0,
+    "min": 1.0,
+    "max": 1.0,
+    "values": [
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ]
+   },
+   "wrongly_removed_rate": {
+    "mean": 0.0,
+    "min": 0.0,
+    "max": 0.0,
+    "values": [
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0
+    ]
+   },
+   "grouping_f1": {
+    "mean": 1.0,
+    "min": 1.0,
+    "max": 1.0,
+    "values": [
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ]
+   },
+   "total_tokens": 17501
+  }
+ }
+}

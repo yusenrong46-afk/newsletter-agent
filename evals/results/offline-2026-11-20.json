@@ -1,7 +1,7 @@
 {
  "label": "offline",
  "model": "offline stand-in (keyword rules)",
- "generated_at": "2026-11-20T14:37:00+00:00",
+ "generated_at": "2026-11-20T15:10:38+00:00",
  "dataset": {
   "cases": 96,
   "by_label": {
@@ -30,6 +30,7 @@
   "accuracy": 0.8958
  },
  "category_accuracy": 0.7634,
+ "lenient_category_accuracy": 0.7634,
  "macro_f1": 0.6895,
  "per_category": {
   "editorial_newsletter": {
@@ -160,156 +161,277 @@
    "subject": "Reset your password",
    "expected": "transactional",
    "predicted": "editorial_newsletter",
-   "note": "Security code with list headers"
+   "note": "Security code with list headers",
+   "acceptable": false
   },
   {
    "id": "hard-shipping-footer",
    "subject": "Your order has shipped",
    "expected": "transactional",
    "predicted": "editorial_newsletter",
-   "note": "Shipping notice with a marketing footer"
+   "note": "Shipping notice with a marketing footer",
+   "acceptable": false
   },
   {
    "id": "hard-security-alert",
    "subject": "New sign-in from Firefox on Linux",
    "expected": "transactional",
    "predicted": "editorial_newsletter",
-   "note": ""
+   "note": "",
+   "acceptable": false
   },
   {
    "id": "hard-event-ticket",
    "subject": "Your tickets for Harbor Lights Festival",
    "expected": "transactional",
    "predicted": "editorial_newsletter",
-   "note": ""
+   "note": "",
+   "acceptable": false
   },
   {
    "id": "hard-friend-platform",
    "subject": "Re: your comment on my post",
    "expected": "personal_or_other",
    "predicted": "editorial_newsletter",
-   "note": "A friend replying through a newsletter platform"
+   "note": "A friend replying through a newsletter platform",
+   "acceptable": false
   },
   {
    "id": "hard-analytics-0",
    "subject": "Your weekly site report: week 22",
    "expected": "product_update",
    "predicted": "personal_or_other",
-   "note": "Automated weekly report with no list headers; headers only"
+   "note": "Automated weekly report with no list headers; headers only",
+   "acceptable": false
   },
   {
    "id": "hard-analytics-1",
    "subject": "Your weekly site report: week 21",
    "expected": "product_update",
    "predicted": "personal_or_other",
-   "note": "Automated weekly report with no list headers; headers only"
+   "note": "Automated weekly report with no list headers; headers only",
+   "acceptable": false
   },
   {
    "id": "hard-analytics-2",
    "subject": "Your weekly site report: week 20",
    "expected": "product_update",
    "predicted": "personal_or_other",
-   "note": "Automated weekly report with no list headers; headers only"
+   "note": "Automated weekly report with no list headers; headers only",
+   "acceptable": false
   },
   {
    "id": "hard-policy-update",
    "subject": "We're updating our terms of service",
    "expected": "product_update",
    "predicted": "editorial_newsletter",
-   "note": ""
+   "note": "",
+   "acceptable": false
   },
   {
    "id": "hard-feature-launch",
    "subject": "Introducing offline mode",
    "expected": "product_update",
    "predicted": "editorial_newsletter",
-   "note": ""
+   "note": "",
+   "acceptable": false
   },
   {
    "id": "hard-upgrade-promo",
    "subject": "Upgrade to Notewell Pro and save 30%",
    "expected": "promotional_subscription",
    "predicted": "editorial_newsletter",
-   "note": ""
+   "note": "",
+   "acceptable": false
   },
   {
    "id": "hard-version-3",
    "subject": "Pixel Forge 5.0 is here",
    "expected": "product_update",
    "predicted": "editorial_newsletter",
-   "note": ""
+   "note": "",
+   "acceptable": false
   },
   {
    "id": "hard-webinar",
    "subject": "Free webinar: double your email signups",
    "expected": "promotional_subscription",
    "predicted": "editorial_newsletter",
-   "note": ""
+   "note": "",
+   "acceptable": false
   },
   {
    "id": "hard-charity-appeal",
    "subject": "Can you help us plant 1,000 trees?",
    "expected": "promotional_subscription",
    "predicted": "editorial_newsletter",
-   "note": ""
+   "note": "",
+   "acceptable": false
   },
   {
    "id": "hard-editorial-sale-word",
    "subject": "Why the summer sale season is changing",
    "expected": "editorial_newsletter",
    "predicted": "promotional_subscription",
-   "note": "Editorial issue with the word 'sale' in the subject"
+   "note": "Editorial issue with the word 'sale' in the subject",
+   "acceptable": false
   },
   {
    "id": "hard-brand-story",
    "subject": "Our story: how we source our beans",
    "expected": "promotional_subscription",
    "predicted": "editorial_newsletter",
-   "note": "Promotion written like an article"
+   "note": "Promotion written like an article",
+   "acceptable": false
   },
   {
    "id": "hard-loyalty-points",
    "subject": "You have 450 points to spend",
    "expected": "promotional_subscription",
    "predicted": "editorial_newsletter",
-   "note": ""
+   "note": "",
+   "acceptable": false
   },
   {
    "id": "hard-subscription-renewal",
    "subject": "Your subscription renews on 5 June",
    "expected": "transactional",
    "predicted": "editorial_newsletter",
-   "note": ""
+   "note": "",
+   "acceptable": false
   },
   {
    "id": "hard-2fa-code",
    "subject": "Your Notewell sign-in code",
    "expected": "transactional",
    "predicted": "editorial_newsletter",
-   "note": ""
+   "note": "",
+   "acceptable": false
   },
   {
    "id": "hard-flash-sale",
    "subject": "24 hours only: headphones from $19",
    "expected": "promotional_subscription",
    "predicted": "editorial_newsletter",
-   "note": ""
+   "note": "",
+   "acceptable": false
   },
   {
    "id": "hard-app-changelog",
    "subject": "Taskline changelog: May",
    "expected": "product_update",
    "predicted": "editorial_newsletter",
-   "note": ""
+   "note": "",
+   "acceptable": false
   },
   {
    "id": "hard-service-outage",
    "subject": "Scheduled maintenance on 8 June",
    "expected": "product_update",
    "predicted": "editorial_newsletter",
-   "note": ""
+   "note": "",
+   "acceptable": false
   }
  ],
+ "clear_mistakes": 22,
+ "answers": {
+  "demo-field-html": "editorial_newsletter",
+  "demo-field000": "editorial_newsletter",
+  "demo-field001": "editorial_newsletter",
+  "demo-field002": "editorial_newsletter",
+  "demo-field003": "editorial_newsletter",
+  "demo-field004": "editorial_newsletter",
+  "demo-field005": "editorial_newsletter",
+  "demo-forge000": "product_update",
+  "demo-forge001": "product_update",
+  "demo-forge002": "product_update",
+  "demo-garden000": "editorial_newsletter",
+  "demo-garden001": "editorial_newsletter",
+  "demo-garden002": "editorial_newsletter",
+  "demo-garden003": "editorial_newsletter",
+  "demo-garden004": "editorial_newsletter",
+  "demo-garden005": "editorial_newsletter",
+  "demo-lantern000": "transactional",
+  "demo-lantern001": "transactional",
+  "demo-lantern002": "transactional",
+  "demo-lantern003": "transactional",
+  "demo-lantern004": "transactional",
+  "demo-lantern005": "transactional",
+  "demo-ledger-long": "editorial_newsletter",
+  "demo-ledger000": "editorial_newsletter",
+  "demo-ledger001": "editorial_newsletter",
+  "demo-ledger002": "editorial_newsletter",
+  "demo-ledger003": "editorial_newsletter",
+  "demo-ledger004": "editorial_newsletter",
+  "demo-ledger005": "editorial_newsletter",
+  "demo-maple000": "promotional_subscription",
+  "demo-maple001": "promotional_subscription",
+  "demo-maple002": "promotional_subscription",
+  "demo-maple003": "promotional_subscription",
+  "demo-maple004": "promotional_subscription",
+  "demo-maple005": "promotional_subscription",
+  "demo-orbit-injection": "editorial_newsletter",
+  "demo-orbit000": "editorial_newsletter",
+  "demo-orbit001": "editorial_newsletter",
+  "demo-orbit002": "editorial_newsletter",
+  "demo-orbit003": "editorial_newsletter",
+  "demo-orbit004": "editorial_newsletter",
+  "demo-orbit005": "editorial_newsletter",
+  "demo-sam000": "not_sent",
+  "demo-sam001": "not_sent",
+  "demo-trail000": "promotional_subscription",
+  "demo-trail001": "promotional_subscription",
+  "demo-trail002": "promotional_subscription",
+  "demo-trail003": "promotional_subscription",
+  "demo-trail004": "promotional_subscription",
+  "demo-trail005": "promotional_subscription",
+  "demo-trailorder000": "transactional",
+  "demo-trailorder001": "transactional",
+  "demo-trailorder002": "transactional",
+  "demo-trailorder003": "transactional",
+  "demo-trailorder004": "transactional",
+  "demo-trailorder005": "transactional",
+  "hard-garden-receipt": "transactional",
+  "hard-ledger-password": "editorial_newsletter",
+  "hard-shipping-footer": "editorial_newsletter",
+  "hard-security-alert": "editorial_newsletter",
+  "hard-event-ticket": "editorial_newsletter",
+  "hard-friend-platform": "editorial_newsletter",
+  "hard-colleague-invite": "not_sent",
+  "hard-jordan-0": "personal_or_other",
+  "hard-jordan-1": "personal_or_other",
+  "hard-jordan-2": "personal_or_other",
+  "hard-analytics-0": "personal_or_other",
+  "hard-analytics-1": "personal_or_other",
+  "hard-analytics-2": "personal_or_other",
+  "hard-policy-update": "editorial_newsletter",
+  "hard-feature-launch": "editorial_newsletter",
+  "hard-upgrade-promo": "editorial_newsletter",
+  "hard-version-3": "editorial_newsletter",
+  "hard-webinar": "editorial_newsletter",
+  "hard-charity-appeal": "editorial_newsletter",
+  "hard-editorial-sale-word": "promotional_subscription",
+  "hard-brand-story": "editorial_newsletter",
+  "hard-spanish": "editorial_newsletter",
+  "hard-german": "editorial_newsletter",
+  "hard-french": "editorial_newsletter",
+  "hard-japanese": "editorial_newsletter",
+  "hard-injection-promo": "promotional_subscription",
+  "hard-injection-receipt": "transactional",
+  "hard-html-promo": "promotional_subscription",
+  "hard-html-editorial": "editorial_newsletter",
+  "hard-empty-digest": "editorial_newsletter",
+  "hard-forum-digest": "editorial_newsletter",
+  "hard-news-digest": "editorial_newsletter",
+  "hard-podcast-notes": "editorial_newsletter",
+  "hard-recipe-letter": "editorial_newsletter",
+  "hard-loyalty-points": "editorial_newsletter",
+  "hard-subscription-renewal": "editorial_newsletter",
+  "hard-2fa-code": "editorial_newsletter",
+  "hard-flash-sale": "editorial_newsletter",
+  "hard-app-changelog": "editorial_newsletter",
+  "hard-service-outage": "editorial_newsletter"
+ },
  "usage": {
   "model_calls": 4,
   "input_tokens": 0,
@@ -321,6 +443,557 @@
   "metric": "subscription_detection.f1",
   "minimum": 0.9,
   "met": true
+ },
+ "hard": {
+  "label": "offline",
+  "model": "offline stand-in (keyword rules)",
+  "generated_at": "2026-11-20T15:10:39+00:00",
+  "dataset": {
+   "cases": 65,
+   "by_label": {
+    "transactional": 14,
+    "promotional_subscription": 11,
+    "editorial_newsletter": 24,
+    "product_update": 8,
+    "personal_or_other": 8
+   },
+   "by_source": {
+    "harder": 65
+   }
+  },
+  "status": "complete",
+  "complete": true,
+  "cases": 65,
+  "subscription_detection": {
+   "true_positive": 37,
+   "false_positive": 12,
+   "false_negative": 6,
+   "true_negative": 10,
+   "precision": 0.7551,
+   "recall": 0.8605,
+   "f1": 0.8044,
+   "accuracy": 0.7231
+  },
+  "category_accuracy": 0.4,
+  "lenient_category_accuracy": 0.5167,
+  "macro_f1": 0.2677,
+  "per_category": {
+   "editorial_newsletter": {
+    "support": 21,
+    "predicted": 48,
+    "precision": 0.375,
+    "recall": 0.8571,
+    "f1": 0.5217
+   },
+   "promotional_subscription": {
+    "support": 11,
+    "predicted": 1,
+    "precision": 1.0,
+    "recall": 0.0909,
+    "f1": 0.1667
+   },
+   "product_update": {
+    "support": 8,
+    "predicted": 0,
+    "precision": null,
+    "recall": 0.0,
+    "f1": 0.0
+   },
+   "transactional": {
+    "support": 14,
+    "predicted": 2,
+    "precision": 1.0,
+    "recall": 0.1429,
+    "f1": 0.2501
+   },
+   "personal_or_other": {
+    "support": 6,
+    "predicted": 9,
+    "precision": 0.3333,
+    "recall": 0.5,
+    "f1": 0.4
+   },
+   "uncertain": {
+    "support": 0,
+    "predicted": 0,
+    "precision": null,
+    "recall": null,
+    "f1": null
+   }
+  },
+  "confusion": {
+   "editorial_newsletter": {
+    "editorial_newsletter": 18,
+    "promotional_subscription": 0,
+    "product_update": 0,
+    "transactional": 0,
+    "personal_or_other": 3,
+    "uncertain": 0,
+    "unresolved": 0,
+    "pending": 0,
+    "not_sent": 3
+   },
+   "promotional_subscription": {
+    "editorial_newsletter": 10,
+    "promotional_subscription": 1,
+    "product_update": 0,
+    "transactional": 0,
+    "personal_or_other": 0,
+    "uncertain": 0,
+    "unresolved": 0,
+    "pending": 0,
+    "not_sent": 0
+   },
+   "product_update": {
+    "editorial_newsletter": 8,
+    "promotional_subscription": 0,
+    "product_update": 0,
+    "transactional": 0,
+    "personal_or_other": 0,
+    "uncertain": 0,
+    "unresolved": 0,
+    "pending": 0,
+    "not_sent": 0
+   },
+   "transactional": {
+    "editorial_newsletter": 9,
+    "promotional_subscription": 0,
+    "product_update": 0,
+    "transactional": 2,
+    "personal_or_other": 3,
+    "uncertain": 0,
+    "unresolved": 0,
+    "pending": 0,
+    "not_sent": 0
+   },
+   "personal_or_other": {
+    "editorial_newsletter": 3,
+    "promotional_subscription": 0,
+    "product_update": 0,
+    "transactional": 0,
+    "personal_or_other": 3,
+    "uncertain": 0,
+    "unresolved": 0,
+    "pending": 0,
+    "not_sent": 2
+   },
+   "uncertain": {
+    "editorial_newsletter": 0,
+    "promotional_subscription": 0,
+    "product_update": 0,
+    "transactional": 0,
+    "personal_or_other": 0,
+    "uncertain": 0,
+    "unresolved": 0,
+    "pending": 0,
+    "not_sent": 0
+   }
+  },
+  "triage": {
+   "tiers": {
+    "bulk": 51,
+    "not_candidate": 5,
+    "recurring": 9
+   },
+   "subscriptions_reaching_model": 0.9302,
+   "personal_kept_from_model_or_headers_only": 0.625
+  },
+  "unresolved_rate": 0.0,
+  "publication_name_accuracy": null,
+  "mistakes": [
+   {
+    "id": "x-order-recs",
+    "subject": "Order confirmed: your headphones are on the way",
+    "expected": "transactional",
+    "predicted": "editorial_newsletter",
+    "note": "Order confirmation with product recommendations",
+    "acceptable": false
+   },
+   {
+    "id": "x-confirm-subscription",
+    "subject": "Please confirm your subscription",
+    "expected": "transactional",
+    "predicted": "editorial_newsletter",
+    "note": "Double opt-in confirmation from a newsletter",
+    "acceptable": false
+   },
+   {
+    "id": "x-welcome",
+    "subject": "Welcome to The Shelf! Here's what to expect",
+    "expected": "transactional",
+    "predicted": "editorial_newsletter",
+    "note": "Welcome email: a one-off event, sent by a newsletter",
+    "acceptable": true
+   },
+   {
+    "id": "x-renewal-upsell",
+    "subject": "Your plan renews soon. Upgrade and save 20%",
+    "expected": "promotional_subscription",
+    "predicted": "editorial_newsletter",
+    "note": "Renewal notice used as an upsell",
+    "acceptable": false
+   },
+   {
+    "id": "x-survey",
+    "subject": "How did we do? Rate your recent order",
+    "expected": "transactional",
+    "predicted": "editorial_newsletter",
+    "note": "Post-purchase survey",
+    "acceptable": false
+   },
+   {
+    "id": "x-abandoned-cart",
+    "subject": "You left something behind",
+    "expected": "promotional_subscription",
+    "predicted": "editorial_newsletter",
+    "note": "Abandoned-cart email phrased like a reminder",
+    "acceptable": false
+   },
+   {
+    "id": "x-price-drop",
+    "subject": "Price drop on an item in your wishlist",
+    "expected": "promotional_subscription",
+    "predicted": "editorial_newsletter",
+    "note": "",
+    "acceptable": false
+   },
+   {
+    "id": "x-event-reminder",
+    "subject": "Reminder: Harbor Lights Festival is tomorrow",
+    "expected": "transactional",
+    "predicted": "editorial_newsletter",
+    "note": "",
+    "acceptable": false
+   },
+   {
+    "id": "x-refund",
+    "subject": "Your refund of $24.00 has been issued",
+    "expected": "transactional",
+    "predicted": "editorial_newsletter",
+    "note": "",
+    "acceptable": false
+   },
+   {
+    "id": "x-data-notice",
+    "subject": "Important notice about your account data",
+    "expected": "transactional",
+    "predicted": "editorial_newsletter",
+    "note": "Security incident notice",
+    "acceptable": false
+   },
+   {
+    "id": "x-webinar-replay",
+    "subject": "Replay: the webinar you registered for",
+    "expected": "transactional",
+    "predicted": "editorial_newsletter",
+    "note": "",
+    "acceptable": false
+   },
+   {
+    "id": "x-sales-personal",
+    "subject": "Quick question",
+    "expected": "promotional_subscription",
+    "predicted": "editorial_newsletter",
+    "note": "Automated sales email written like a personal note",
+    "acceptable": false
+   },
+   {
+    "id": "x-fake-reply",
+    "subject": "RE: following up on our offer",
+    "expected": "promotional_subscription",
+    "predicted": "editorial_newsletter",
+    "note": "Subject starts with RE: but there was no conversation",
+    "acceptable": false
+   },
+   {
+    "id": "x-advertorial",
+    "subject": "Sponsored: 5 reasons to switch banks this year",
+    "expected": "promotional_subscription",
+    "predicted": "editorial_newsletter",
+    "note": "A sponsor's message sent on a news list",
+    "acceptable": true
+   },
+   {
+    "id": "x-petition",
+    "subject": "Sign now: save the Marlow wetland",
+    "expected": "promotional_subscription",
+    "predicted": "editorial_newsletter",
+    "note": "Campaign appeal",
+    "acceptable": false
+   },
+   {
+    "id": "x-referral",
+    "subject": "Give a month, get a month",
+    "expected": "promotional_subscription",
+    "predicted": "editorial_newsletter",
+    "note": "",
+    "acceptable": false
+   },
+   {
+    "id": "x-birthday",
+    "subject": "Happy birthday! A little something from us",
+    "expected": "promotional_subscription",
+    "predicted": "editorial_newsletter",
+    "note": "A coupon phrased as a greeting",
+    "acceptable": false
+   },
+   {
+    "id": "x-inject-footer",
+    "subject": "Tents from $89 this weekend",
+    "expected": "promotional_subscription",
+    "predicted": "editorial_newsletter",
+    "note": "Footer pretends to be classifier metadata",
+    "acceptable": false
+   },
+   {
+    "id": "x-api-shutdown",
+    "subject": "Action required: API v1 shuts down on 1 September",
+    "expected": "product_update",
+    "predicted": "editorial_newsletter",
+    "note": "",
+    "acceptable": false
+   },
+   {
+    "id": "x-incident-resolved",
+    "subject": "Resolved: sync delays on 30 May",
+    "expected": "product_update",
+    "predicted": "editorial_newsletter",
+    "note": "",
+    "acceptable": false
+   },
+   {
+    "id": "x-job-alert",
+    "subject": "12 new jobs match your search",
+    "expected": "product_update",
+    "predicted": "editorial_newsletter",
+    "note": "Saved-search alert",
+    "acceptable": false
+   },
+   {
+    "id": "x-social-digest",
+    "subject": "3 new posts from people you follow",
+    "expected": "product_update",
+    "predicted": "editorial_newsletter",
+    "note": "Activity digest from a social app",
+    "acceptable": true
+   },
+   {
+    "id": "x-usage-report",
+    "subject": "Your May storage report",
+    "expected": "product_update",
+    "predicted": "editorial_newsletter",
+    "note": "",
+    "acceptable": false
+   },
+   {
+    "id": "x-beta-invite",
+    "subject": "You're invited to the Notewell beta",
+    "expected": "product_update",
+    "predicted": "editorial_newsletter",
+    "note": "",
+    "acceptable": false
+   },
+   {
+    "id": "x-terse-changelog",
+    "subject": "v2.14.0",
+    "expected": "product_update",
+    "predicted": "editorial_newsletter",
+    "note": "Subject is only a version number",
+    "acceptable": false
+   },
+   {
+    "id": "x-tips",
+    "subject": "5 tips to get more from Notewell",
+    "expected": "product_update",
+    "predicted": "editorial_newsletter",
+    "note": "",
+    "acceptable": true
+   },
+   {
+    "id": "x-family-list",
+    "subject": "Re: Grandma's birthday plan",
+    "expected": "personal_or_other",
+    "predicted": "editorial_newsletter",
+    "note": "A family thread on a group list",
+    "acceptable": false
+   },
+   {
+    "id": "x-dev-list",
+    "subject": "[quill-dev] Re: plugin API proposal",
+    "expected": "personal_or_other",
+    "predicted": "editorial_newsletter",
+    "note": "A discussion list, not a publication",
+    "acceptable": false
+   },
+   {
+    "id": "x-auto-reply",
+    "subject": "Automatic reply: Lunch Thursday?",
+    "expected": "personal_or_other",
+    "predicted": "editorial_newsletter",
+    "note": "",
+    "acceptable": false
+   },
+   {
+    "id": "x-bounce",
+    "subject": "Delivery Status Notification (Failure)",
+    "expected": "transactional",
+    "predicted": "editorial_newsletter",
+    "note": "",
+    "acceptable": false
+   },
+   {
+    "id": "x-rent-0",
+    "subject": "Rent reminder for June",
+    "expected": "transactional",
+    "predicted": "personal_or_other",
+    "note": "Monthly reminder with no bulk headers; headers only",
+    "acceptable": true
+   },
+   {
+    "id": "x-rent-1",
+    "subject": "Rent reminder for May",
+    "expected": "transactional",
+    "predicted": "personal_or_other",
+    "note": "Monthly reminder with no bulk headers; headers only",
+    "acceptable": true
+   },
+   {
+    "id": "x-rent-2",
+    "subject": "Rent reminder for April",
+    "expected": "transactional",
+    "predicted": "personal_or_other",
+    "note": "Monthly reminder with no bulk headers; headers only",
+    "acceptable": true
+   },
+   {
+    "id": "x-club-0",
+    "subject": "Chess club newsletter – May",
+    "expected": "editorial_newsletter",
+    "predicted": "personal_or_other",
+    "note": "A person sends a club newsletter by hand; headers only",
+    "acceptable": false
+   },
+   {
+    "id": "x-club-1",
+    "subject": "Chess club newsletter – April",
+    "expected": "editorial_newsletter",
+    "predicted": "personal_or_other",
+    "note": "A person sends a club newsletter by hand; headers only",
+    "acceptable": false
+   },
+   {
+    "id": "x-club-2",
+    "subject": "Chess club newsletter – March",
+    "expected": "editorial_newsletter",
+    "predicted": "personal_or_other",
+    "note": "A person sends a club newsletter by hand; headers only",
+    "acceptable": false
+   },
+   {
+    "id": "x-solo-letter",
+    "subject": "Letter no. 7: on keeping a notebook",
+    "expected": "editorial_newsletter",
+    "predicted": "not_sent",
+    "note": "No bulk signal and only one email: never sent to the model",
+    "acceptable": false
+   },
+   {
+    "id": "x-pair-letter-0",
+    "subject": "Small Boats, issue 12",
+    "expected": "editorial_newsletter",
+    "predicted": "not_sent",
+    "note": "No bulk signal and only two emails: never sent to the model",
+    "acceptable": false
+   },
+   {
+    "id": "x-pair-letter-1",
+    "subject": "Small Boats, issue 11",
+    "expected": "editorial_newsletter",
+    "predicted": "not_sent",
+    "note": "No bulk signal and only two emails: never sent to the model",
+    "acceptable": false
+   }
+  ],
+  "clear_mistakes": 32,
+  "answers": {
+   "x-order-recs": "editorial_newsletter",
+   "x-confirm-subscription": "editorial_newsletter",
+   "x-welcome": "editorial_newsletter",
+   "x-platform-receipt": "transactional",
+   "x-renewal-upsell": "editorial_newsletter",
+   "x-survey": "editorial_newsletter",
+   "x-abandoned-cart": "editorial_newsletter",
+   "x-price-drop": "editorial_newsletter",
+   "x-event-reminder": "editorial_newsletter",
+   "x-refund": "editorial_newsletter",
+   "x-data-notice": "editorial_newsletter",
+   "x-webinar-replay": "editorial_newsletter",
+   "x-sales-personal": "editorial_newsletter",
+   "x-fake-reply": "editorial_newsletter",
+   "x-content-marketing": "editorial_newsletter",
+   "x-advertorial": "editorial_newsletter",
+   "x-nonprofit-news": "editorial_newsletter",
+   "x-petition": "editorial_newsletter",
+   "x-referral": "editorial_newsletter",
+   "x-birthday": "editorial_newsletter",
+   "x-inject-footer": "editorial_newsletter",
+   "x-inject-new-id": "promotional_subscription",
+   "x-api-shutdown": "editorial_newsletter",
+   "x-incident-resolved": "editorial_newsletter",
+   "x-job-alert": "editorial_newsletter",
+   "x-social-digest": "editorial_newsletter",
+   "x-usage-report": "editorial_newsletter",
+   "x-beta-invite": "editorial_newsletter",
+   "x-terse-changelog": "editorial_newsletter",
+   "x-tips": "editorial_newsletter",
+   "x-community-roundup": "editorial_newsletter",
+   "x-label-only": "editorial_newsletter",
+   "x-sponsor-first": "editorial_newsletter",
+   "x-number-subject": "editorial_newsletter",
+   "x-emoji-subject": "editorial_newsletter",
+   "x-allcaps": "editorial_newsletter",
+   "x-link-roundup": "editorial_newsletter",
+   "x-paywall-teaser": "editorial_newsletter",
+   "x-portuguese": "editorial_newsletter",
+   "x-korean": "editorial_newsletter",
+   "x-mixed-language": "editorial_newsletter",
+   "x-long-essay": "editorial_newsletter",
+   "x-poem": "editorial_newsletter",
+   "x-no-subject": "editorial_newsletter",
+   "x-inject-json": "editorial_newsletter",
+   "x-inject-hidden-html": "editorial_newsletter",
+   "x-family-list": "editorial_newsletter",
+   "x-dev-list": "editorial_newsletter",
+   "x-auto-reply": "editorial_newsletter",
+   "x-bounce": "editorial_newsletter",
+   "x-inject-polite": "transactional",
+   "x-calendar-invite": "not_sent",
+   "x-forwarded": "not_sent",
+   "x-recruiter-0": "personal_or_other",
+   "x-recruiter-1": "personal_or_other",
+   "x-recruiter-2": "personal_or_other",
+   "x-rent-0": "personal_or_other",
+   "x-rent-1": "personal_or_other",
+   "x-rent-2": "personal_or_other",
+   "x-club-0": "personal_or_other",
+   "x-club-1": "personal_or_other",
+   "x-club-2": "personal_or_other",
+   "x-solo-letter": "not_sent",
+   "x-pair-letter-0": "not_sent",
+   "x-pair-letter-1": "not_sent"
+  },
+  "usage": {
+   "model_calls": 3,
+   "input_tokens": 0,
+   "output_tokens": 0,
+   "total_tokens": 0,
+   "tokens_per_1000_emails": 0
+  },
+  "ship_bar": {
+   "metric": "subscription_detection.f1",
+   "minimum": 0.9,
+   "met": false
+  }
  },
  "briefing_team": {
   "fact_check": {
@@ -359,6 +1032,770 @@
    "model_calls": 3,
    "input_tokens": 0,
    "output_tokens": 0,
+   "total_tokens": 0
+  }
+ },
+ "repeated": {
+  "runs": 1,
+  "sets": {
+   "standard": {
+    "runs": 1,
+    "complete_runs": 1,
+    "cases": 96,
+    "category_accuracy": {
+     "mean": 0.7634,
+     "min": 0.7634,
+     "max": 0.7634,
+     "values": [
+      0.7634
+     ]
+    },
+    "lenient_category_accuracy": {
+     "mean": 0.7634,
+     "min": 0.7634,
+     "max": 0.7634,
+     "values": [
+      0.7634
+     ]
+    },
+    "subscription_f1": {
+     "mean": 0.9296,
+     "min": 0.9296,
+     "max": 0.9296,
+     "values": [
+      0.9296
+     ]
+    },
+    "macro_f1": {
+     "mean": 0.6895,
+     "min": 0.6895,
+     "max": 0.6895,
+     "values": [
+      0.6895
+     ]
+    },
+    "unresolved_rate": {
+     "mean": 0.0,
+     "min": 0.0,
+     "max": 0.0,
+     "values": [
+      0.0
+     ]
+    },
+    "subscriptions_reaching_model": 1.0,
+    "total_tokens": 0,
+    "stable_right": 74,
+    "always_wrong": [
+     {
+      "id": "hard-ledger-password",
+      "subject": "Reset your password",
+      "expected": "transactional",
+      "also_acceptable": [],
+      "answers": {
+       "editorial_newsletter": 1
+      },
+      "acceptable_runs": 0,
+      "note": "Security code with list headers"
+     },
+     {
+      "id": "hard-shipping-footer",
+      "subject": "Your order has shipped",
+      "expected": "transactional",
+      "also_acceptable": [],
+      "answers": {
+       "editorial_newsletter": 1
+      },
+      "acceptable_runs": 0,
+      "note": "Shipping notice with a marketing footer"
+     },
+     {
+      "id": "hard-security-alert",
+      "subject": "New sign-in from Firefox on Linux",
+      "expected": "transactional",
+      "also_acceptable": [],
+      "answers": {
+       "editorial_newsletter": 1
+      },
+      "acceptable_runs": 0,
+      "note": ""
+     },
+     {
+      "id": "hard-event-ticket",
+      "subject": "Your tickets for Harbor Lights Festival",
+      "expected": "transactional",
+      "also_acceptable": [],
+      "answers": {
+       "editorial_newsletter": 1
+      },
+      "acceptable_runs": 0,
+      "note": ""
+     },
+     {
+      "id": "hard-friend-platform",
+      "subject": "Re: your comment on my post",
+      "expected": "personal_or_other",
+      "also_acceptable": [],
+      "answers": {
+       "editorial_newsletter": 1
+      },
+      "acceptable_runs": 0,
+      "note": "A friend replying through a newsletter platform"
+     },
+     {
+      "id": "hard-analytics-0",
+      "subject": "Your weekly site report: week 22",
+      "expected": "product_update",
+      "also_acceptable": [],
+      "answers": {
+       "personal_or_other": 1
+      },
+      "acceptable_runs": 0,
+      "note": "Automated weekly report with no list headers; headers only"
+     },
+     {
+      "id": "hard-analytics-1",
+      "subject": "Your weekly site report: week 21",
+      "expected": "product_update",
+      "also_acceptable": [],
+      "answers": {
+       "personal_or_other": 1
+      },
+      "acceptable_runs": 0,
+      "note": "Automated weekly report with no list headers; headers only"
+     },
+     {
+      "id": "hard-analytics-2",
+      "subject": "Your weekly site report: week 20",
+      "expected": "product_update",
+      "also_acceptable": [],
+      "answers": {
+       "personal_or_other": 1
+      },
+      "acceptable_runs": 0,
+      "note": "Automated weekly report with no list headers; headers only"
+     },
+     {
+      "id": "hard-policy-update",
+      "subject": "We're updating our terms of service",
+      "expected": "product_update",
+      "also_acceptable": [],
+      "answers": {
+       "editorial_newsletter": 1
+      },
+      "acceptable_runs": 0,
+      "note": ""
+     },
+     {
+      "id": "hard-feature-launch",
+      "subject": "Introducing offline mode",
+      "expected": "product_update",
+      "also_acceptable": [],
+      "answers": {
+       "editorial_newsletter": 1
+      },
+      "acceptable_runs": 0,
+      "note": ""
+     },
+     {
+      "id": "hard-upgrade-promo",
+      "subject": "Upgrade to Notewell Pro and save 30%",
+      "expected": "promotional_subscription",
+      "also_acceptable": [],
+      "answers": {
+       "editorial_newsletter": 1
+      },
+      "acceptable_runs": 0,
+      "note": ""
+     },
+     {
+      "id": "hard-version-3",
+      "subject": "Pixel Forge 5.0 is here",
+      "expected": "product_update",
+      "also_acceptable": [],
+      "answers": {
+       "editorial_newsletter": 1
+      },
+      "acceptable_runs": 0,
+      "note": ""
+     },
+     {
+      "id": "hard-webinar",
+      "subject": "Free webinar: double your email signups",
+      "expected": "promotional_subscription",
+      "also_acceptable": [],
+      "answers": {
+       "editorial_newsletter": 1
+      },
+      "acceptable_runs": 0,
+      "note": ""
+     },
+     {
+      "id": "hard-charity-appeal",
+      "subject": "Can you help us plant 1,000 trees?",
+      "expected": "promotional_subscription",
+      "also_acceptable": [],
+      "answers": {
+       "editorial_newsletter": 1
+      },
+      "acceptable_runs": 0,
+      "note": ""
+     },
+     {
+      "id": "hard-editorial-sale-word",
+      "subject": "Why the summer sale season is changing",
+      "expected": "editorial_newsletter",
+      "also_acceptable": [],
+      "answers": {
+       "promotional_subscription": 1
+      },
+      "acceptable_runs": 0,
+      "note": "Editorial issue with the word 'sale' in the subject"
+     },
+     {
+      "id": "hard-brand-story",
+      "subject": "Our story: how we source our beans",
+      "expected": "promotional_subscription",
+      "also_acceptable": [],
+      "answers": {
+       "editorial_newsletter": 1
+      },
+      "acceptable_runs": 0,
+      "note": "Promotion written like an article"
+     },
+     {
+      "id": "hard-loyalty-points",
+      "subject": "You have 450 points to spend",
+      "expected": "promotional_subscription",
+      "also_acceptable": [],
+      "answers": {
+       "editorial_newsletter": 1
+      },
+      "acceptable_runs": 0,
+      "note": ""
+     },
+     {
+      "id": "hard-subscription-renewal",
+      "subject": "Your subscription renews on 5 June",
+      "expected": "transactional",
+      "also_acceptable": [],
+      "answers": {
+       "editorial_newsletter": 1
+      },
+      "acceptable_runs": 0,
+      "note": ""
+     },
+     {
+      "id": "hard-2fa-code",
+      "subject": "Your Notewell sign-in code",
+      "expected": "transactional",
+      "also_acceptable": [],
+      "answers": {
+       "editorial_newsletter": 1
+      },
+      "acceptable_runs": 0,
+      "note": ""
+     },
+     {
+      "id": "hard-flash-sale",
+      "subject": "24 hours only: headphones from $19",
+      "expected": "promotional_subscription",
+      "also_acceptable": [],
+      "answers": {
+       "editorial_newsletter": 1
+      },
+      "acceptable_runs": 0,
+      "note": ""
+     },
+     {
+      "id": "hard-app-changelog",
+      "subject": "Taskline changelog: May",
+      "expected": "product_update",
+      "also_acceptable": [],
+      "answers": {
+       "editorial_newsletter": 1
+      },
+      "acceptable_runs": 0,
+      "note": ""
+     },
+     {
+      "id": "hard-service-outage",
+      "subject": "Scheduled maintenance on 8 June",
+      "expected": "product_update",
+      "also_acceptable": [],
+      "answers": {
+       "editorial_newsletter": 1
+      },
+      "acceptable_runs": 0,
+      "note": ""
+     }
+    ],
+    "changed_between_runs": []
+   },
+   "hard": {
+    "runs": 1,
+    "complete_runs": 1,
+    "cases": 65,
+    "category_accuracy": {
+     "mean": 0.4,
+     "min": 0.4,
+     "max": 0.4,
+     "values": [
+      0.4
+     ]
+    },
+    "lenient_category_accuracy": {
+     "mean": 0.5167,
+     "min": 0.5167,
+     "max": 0.5167,
+     "values": [
+      0.5167
+     ]
+    },
+    "subscription_f1": {
+     "mean": 0.8044,
+     "min": 0.8044,
+     "max": 0.8044,
+     "values": [
+      0.8044
+     ]
+    },
+    "macro_f1": {
+     "mean": 0.2677,
+     "min": 0.2677,
+     "max": 0.2677,
+     "values": [
+      0.2677
+     ]
+    },
+    "unresolved_rate": {
+     "mean": 0.0,
+     "min": 0.0,
+     "max": 0.0,
+     "values": [
+      0.0
+     ]
+    },
+    "subscriptions_reaching_model": 0.9302,
+    "total_tokens": 0,
+    "stable_right": 33,
+    "always_wrong": [
+     {
+      "id": "x-order-recs",
+      "subject": "Order confirmed: your headphones are on the way",
+      "expected": "transactional",
+      "also_acceptable": [],
+      "answers": {
+       "editorial_newsletter": 1
+      },
+      "acceptable_runs": 0,
+      "note": "Order confirmation with product recommendations"
+     },
+     {
+      "id": "x-confirm-subscription",
+      "subject": "Please confirm your subscription",
+      "expected": "transactional",
+      "also_acceptable": [],
+      "answers": {
+       "editorial_newsletter": 1
+      },
+      "acceptable_runs": 0,
+      "note": "Double opt-in confirmation from a newsletter"
+     },
+     {
+      "id": "x-renewal-upsell",
+      "subject": "Your plan renews soon. Upgrade and save 20%",
+      "expected": "promotional_subscription",
+      "also_acceptable": [
+       "transactional"
+      ],
+      "answers": {
+       "editorial_newsletter": 1
+      },
+      "acceptable_runs": 0,
+      "note": "Renewal notice used as an upsell"
+     },
+     {
+      "id": "x-survey",
+      "subject": "How did we do? Rate your recent order",
+      "expected": "transactional",
+      "also_acceptable": [
+       "promotional_subscription"
+      ],
+      "answers": {
+       "editorial_newsletter": 1
+      },
+      "acceptable_runs": 0,
+      "note": "Post-purchase survey"
+     },
+     {
+      "id": "x-abandoned-cart",
+      "subject": "You left something behind",
+      "expected": "promotional_subscription",
+      "also_acceptable": [],
+      "answers": {
+       "editorial_newsletter": 1
+      },
+      "acceptable_runs": 0,
+      "note": "Abandoned-cart email phrased like a reminder"
+     },
+     {
+      "id": "x-price-drop",
+      "subject": "Price drop on an item in your wishlist",
+      "expected": "promotional_subscription",
+      "also_acceptable": [
+       "product_update"
+      ],
+      "answers": {
+       "editorial_newsletter": 1
+      },
+      "acceptable_runs": 0,
+      "note": ""
+     },
+     {
+      "id": "x-event-reminder",
+      "subject": "Reminder: Harbor Lights Festival is tomorrow",
+      "expected": "transactional",
+      "also_acceptable": [],
+      "answers": {
+       "editorial_newsletter": 1
+      },
+      "acceptable_runs": 0,
+      "note": ""
+     },
+     {
+      "id": "x-refund",
+      "subject": "Your refund of $24.00 has been issued",
+      "expected": "transactional",
+      "also_acceptable": [],
+      "answers": {
+       "editorial_newsletter": 1
+      },
+      "acceptable_runs": 0,
+      "note": ""
+     },
+     {
+      "id": "x-data-notice",
+      "subject": "Important notice about your account data",
+      "expected": "transactional",
+      "also_acceptable": [
+       "product_update"
+      ],
+      "answers": {
+       "editorial_newsletter": 1
+      },
+      "acceptable_runs": 0,
+      "note": "Security incident notice"
+     },
+     {
+      "id": "x-webinar-replay",
+      "subject": "Replay: the webinar you registered for",
+      "expected": "transactional",
+      "also_acceptable": [
+       "promotional_subscription"
+      ],
+      "answers": {
+       "editorial_newsletter": 1
+      },
+      "acceptable_runs": 0,
+      "note": ""
+     },
+     {
+      "id": "x-sales-personal",
+      "subject": "Quick question",
+      "expected": "promotional_subscription",
+      "also_acceptable": [
+       "personal_or_other"
+      ],
+      "answers": {
+       "editorial_newsletter": 1
+      },
+      "acceptable_runs": 0,
+      "note": "Automated sales email written like a personal note"
+     },
+     {
+      "id": "x-fake-reply",
+      "subject": "RE: following up on our offer",
+      "expected": "promotional_subscription",
+      "also_acceptable": [],
+      "answers": {
+       "editorial_newsletter": 1
+      },
+      "acceptable_runs": 0,
+      "note": "Subject starts with RE: but there was no conversation"
+     },
+     {
+      "id": "x-petition",
+      "subject": "Sign now: save the Marlow wetland",
+      "expected": "promotional_subscription",
+      "also_acceptable": [],
+      "answers": {
+       "editorial_newsletter": 1
+      },
+      "acceptable_runs": 0,
+      "note": "Campaign appeal"
+     },
+     {
+      "id": "x-referral",
+      "subject": "Give a month, get a month",
+      "expected": "promotional_subscription",
+      "also_acceptable": [],
+      "answers": {
+       "editorial_newsletter": 1
+      },
+      "acceptable_runs": 0,
+      "note": ""
+     },
+     {
+      "id": "x-birthday",
+      "subject": "Happy birthday! A little something from us",
+      "expected": "promotional_subscription",
+      "also_acceptable": [],
+      "answers": {
+       "editorial_newsletter": 1
+      },
+      "acceptable_runs": 0,
+      "note": "A coupon phrased as a greeting"
+     },
+     {
+      "id": "x-inject-footer",
+      "subject": "Tents from $89 this weekend",
+      "expected": "promotional_subscription",
+      "also_acceptable": [],
+      "answers": {
+       "editorial_newsletter": 1
+      },
+      "acceptable_runs": 0,
+      "note": "Footer pretends to be classifier metadata"
+     },
+     {
+      "id": "x-api-shutdown",
+      "subject": "Action required: API v1 shuts down on 1 September",
+      "expected": "product_update",
+      "also_acceptable": [
+       "transactional"
+      ],
+      "answers": {
+       "editorial_newsletter": 1
+      },
+      "acceptable_runs": 0,
+      "note": ""
+     },
+     {
+      "id": "x-incident-resolved",
+      "subject": "Resolved: sync delays on 30 May",
+      "expected": "product_update",
+      "also_acceptable": [
+       "transactional"
+      ],
+      "answers": {
+       "editorial_newsletter": 1
+      },
+      "acceptable_runs": 0,
+      "note": ""
+     },
+     {
+      "id": "x-job-alert",
+      "subject": "12 new jobs match your search",
+      "expected": "product_update",
+      "also_acceptable": [
+       "promotional_subscription"
+      ],
+      "answers": {
+       "editorial_newsletter": 1
+      },
+      "acceptable_runs": 0,
+      "note": "Saved-search alert"
+     },
+     {
+      "id": "x-usage-report",
+      "subject": "Your May storage report",
+      "expected": "product_update",
+      "also_acceptable": [
+       "transactional"
+      ],
+      "answers": {
+       "editorial_newsletter": 1
+      },
+      "acceptable_runs": 0,
+      "note": ""
+     },
+     {
+      "id": "x-beta-invite",
+      "subject": "You're invited to the Notewell beta",
+      "expected": "product_update",
+      "also_acceptable": [
+       "promotional_subscription"
+      ],
+      "answers": {
+       "editorial_newsletter": 1
+      },
+      "acceptable_runs": 0,
+      "note": ""
+     },
+     {
+      "id": "x-terse-changelog",
+      "subject": "v2.14.0",
+      "expected": "product_update",
+      "also_acceptable": [],
+      "answers": {
+       "editorial_newsletter": 1
+      },
+      "acceptable_runs": 0,
+      "note": "Subject is only a version number"
+     },
+     {
+      "id": "x-family-list",
+      "subject": "Re: Grandma's birthday plan",
+      "expected": "personal_or_other",
+      "also_acceptable": [],
+      "answers": {
+       "editorial_newsletter": 1
+      },
+      "acceptable_runs": 0,
+      "note": "A family thread on a group list"
+     },
+     {
+      "id": "x-dev-list",
+      "subject": "[quill-dev] Re: plugin API proposal",
+      "expected": "personal_or_other",
+      "also_acceptable": [
+       "uncertain"
+      ],
+      "answers": {
+       "editorial_newsletter": 1
+      },
+      "acceptable_runs": 0,
+      "note": "A discussion list, not a publication"
+     },
+     {
+      "id": "x-auto-reply",
+      "subject": "Automatic reply: Lunch Thursday?",
+      "expected": "personal_or_other",
+      "also_acceptable": [
+       "transactional"
+      ],
+      "answers": {
+       "editorial_newsletter": 1
+      },
+      "acceptable_runs": 0,
+      "note": ""
+     },
+     {
+      "id": "x-bounce",
+      "subject": "Delivery Status Notification (Failure)",
+      "expected": "transactional",
+      "also_acceptable": [
+       "personal_or_other"
+      ],
+      "answers": {
+       "editorial_newsletter": 1
+      },
+      "acceptable_runs": 0,
+      "note": ""
+     },
+     {
+      "id": "x-club-0",
+      "subject": "Chess club newsletter – May",
+      "expected": "editorial_newsletter",
+      "also_acceptable": [
+       "uncertain"
+      ],
+      "answers": {
+       "personal_or_other": 1
+      },
+      "acceptable_runs": 0,
+      "note": "A person sends a club newsletter by hand; headers only"
+     },
+     {
+      "id": "x-club-1",
+      "subject": "Chess club newsletter – April",
+      "expected": "editorial_newsletter",
+      "also_acceptable": [
+       "uncertain"
+      ],
+      "answers": {
+       "personal_or_other": 1
+      },
+      "acceptable_runs": 0,
+      "note": "A person sends a club newsletter by hand; headers only"
+     },
+     {
+      "id": "x-club-2",
+      "subject": "Chess club newsletter – March",
+      "expected": "editorial_newsletter",
+      "also_acceptable": [
+       "uncertain"
+      ],
+      "answers": {
+       "personal_or_other": 1
+      },
+      "acceptable_runs": 0,
+      "note": "A person sends a club newsletter by hand; headers only"
+     },
+     {
+      "id": "x-solo-letter",
+      "subject": "Letter no. 7: on keeping a notebook",
+      "expected": "editorial_newsletter",
+      "also_acceptable": [],
+      "answers": {
+       "not_sent": 1
+      },
+      "acceptable_runs": 0,
+      "note": "No bulk signal and only one email: never sent to the model"
+     },
+     {
+      "id": "x-pair-letter-0",
+      "subject": "Small Boats, issue 12",
+      "expected": "editorial_newsletter",
+      "also_acceptable": [],
+      "answers": {
+       "not_sent": 1
+      },
+      "acceptable_runs": 0,
+      "note": "No bulk signal and only two emails: never sent to the model"
+     },
+     {
+      "id": "x-pair-letter-1",
+      "subject": "Small Boats, issue 11",
+      "expected": "editorial_newsletter",
+      "also_acceptable": [],
+      "answers": {
+       "not_sent": 1
+      },
+      "acceptable_runs": 0,
+      "note": "No bulk signal and only two emails: never sent to the model"
+     }
+    ],
+    "changed_between_runs": []
+   }
+  },
+  "briefing_team": {
+   "runs": 1,
+   "complete_runs": 1,
+   "catch_rate": {
+    "mean": 0.75,
+    "min": 0.75,
+    "max": 0.75,
+    "values": [
+     0.75
+    ]
+   },
+   "wrongly_removed_rate": {
+    "mean": 0.0909,
+    "min": 0.0909,
+    "max": 0.0909,
+    "values": [
+     0.0909
+    ]
+   },
+   "grouping_f1": {
+    "mean": 0.8889,
+    "min": 0.8889,
+    "max": 0.8889,
+    "values": [
+     0.8889
+    ]
+   },
    "total_tokens": 0
   }
  }
