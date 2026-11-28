@@ -21,6 +21,9 @@ token.json
 # Generated demo site (CI builds it)
 site/
 
+# Frontend dependencies
+web/node_modules/
+
 # Editors and OS
 .DS_Store
 .vscode/
