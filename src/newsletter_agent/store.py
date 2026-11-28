@@ -27,13 +27,14 @@ from typing import Any, TextIO
 from . import config
 
 DATABASE_NAME = "newsletter.db"
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 LEGACY_JSON_FILES = ("metadata_cache.json", "classification_cache.json", "checkpoint.json",
                      "briefing_checkpoint.json")
 # A checkpoint's listing query reaches one day past its window, so keep two days of margin.
 RETENTION_MARGIN_MS = 2 * 86_400_000
 BUSY_TIMEOUT_SECONDS = 30
 TABLES = ("metadata", "classifications", "kv")
+SEARCH_TABLES = ("search_docs", "search_fts", "search_embeddings")
 IN_USE = "Another newsletter-agent run is using this data. Try again when it finishes."
 
 SCHEMA = """
@@ -52,6 +53,32 @@ CREATE INDEX IF NOT EXISTS classifications_by_message ON classifications (messag
 CREATE TABLE IF NOT EXISTS kv (
     name TEXT PRIMARY KEY,
     value TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS search_docs (
+    doc_id TEXT PRIMARY KEY,
+    doc_type TEXT NOT NULL,
+    message_id TEXT NOT NULL,
+    publication TEXT NOT NULL,
+    subject TEXT NOT NULL,
+    text TEXT NOT NULL,
+    received TEXT NOT NULL,
+    internal_date INTEGER NOT NULL,
+    briefing_date TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS search_docs_by_date ON search_docs (internal_date);
+CREATE INDEX IF NOT EXISTS search_docs_by_pub ON search_docs (publication);
+CREATE VIRTUAL TABLE IF NOT EXISTS search_fts USING fts5(
+    doc_id UNINDEXED,
+    publication,
+    subject,
+    text,
+    tokenize='porter unicode61'
+);
+CREATE TABLE IF NOT EXISTS search_embeddings (
+    doc_id TEXT PRIMARY KEY,
+    model TEXT NOT NULL,
+    dims INTEGER NOT NULL,
+    vector BLOB NOT NULL
 );
 """
 
@@ -179,7 +206,7 @@ class InventoryStore:
             connection.execute("PRAGMA synchronous = FULL")
             tables = {row[0] for row in connection.execute("SELECT name FROM sqlite_master WHERE type = 'table'")}
             version = connection.execute("PRAGMA user_version").fetchone()[0]
-            if version != SCHEMA_VERSION or not set(TABLES) <= tables:
+            if version != SCHEMA_VERSION or not (set(TABLES) | set(SEARCH_TABLES)) <= tables:
                 connection.executescript(SCHEMA)
                 connection.execute(f"PRAGMA user_version = {SCHEMA_VERSION}")
                 connection.commit()
@@ -250,6 +277,11 @@ class InventoryStore:
             self._lock_file.close()
             self._lock_file = None
 
+    @property
+    def connection(self) -> sqlite3.Connection:
+        """The open SQLite connection, shared with the search index."""
+        return self._connection
+
     def close(self):
         """Commit nothing further and release the database."""
         self._connection.close()
@@ -285,12 +317,22 @@ class InventoryStore:
         return cutoff
 
     def prune(self, now_ms: int, retention_days: int) -> int:
-        """Delete header records (and their labels) older than the retention window. Returns rows removed."""
+        """Delete header records (and their labels and search docs) older than the retention window."""
         cutoff = self.retention_cutoff_ms(now_ms, retention_days)
         self._connection.execute(
             "DELETE FROM classifications WHERE message_id IN (SELECT id FROM metadata WHERE internal_date < ?)",
             (cutoff,))
         removed = self._connection.execute("DELETE FROM metadata WHERE internal_date < ?", (cutoff,)).rowcount
+        old_docs = [
+            row[0]
+            for row in self._connection.execute(
+                "SELECT doc_id FROM search_docs WHERE internal_date > 0 AND internal_date < ?", (cutoff,))
+        ]
+        if old_docs:
+            placeholders = ",".join("?" for _ in old_docs)
+            self._connection.execute(f"DELETE FROM search_fts WHERE doc_id IN ({placeholders})", old_docs)
+            self._connection.execute(f"DELETE FROM search_embeddings WHERE doc_id IN ({placeholders})", old_docs)
+            self._connection.execute(f"DELETE FROM search_docs WHERE doc_id IN ({placeholders})", old_docs)
         self._connection.commit()
         return removed
 
@@ -337,6 +379,24 @@ def latest_report_path(suffix: str = "json") -> Path | None:
 
 def load_latest_report() -> dict | None:
     path = latest_report_path()
+    return json.loads(path.read_text(encoding="utf-8")) if path else None
+
+
+def list_briefing_paths(directory: Path | None = None) -> list[Path]:
+    """Saved dated JSON briefings, oldest first."""
+    folder = directory or config.briefings_dir()
+    if not folder.exists():
+        return []
+    return sorted(path for path in folder.glob("????-??-??.json") if path.is_file())
+
+
+def latest_briefing_path(directory: Path | None = None) -> Path | None:
+    paths = list_briefing_paths(directory)
+    return paths[-1] if paths else None
+
+
+def load_latest_briefing(directory: Path | None = None) -> dict | None:
+    path = latest_briefing_path(directory)
     return json.loads(path.read_text(encoding="utf-8")) if path else None
 
 

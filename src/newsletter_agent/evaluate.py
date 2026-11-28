@@ -449,6 +449,150 @@ def run_team_eval(model_factory: Callable[[], ModelClient], max_model_calls: int
     return asyncio.run(run_team_cases(load_team_cases(), model_factory(), max_model_calls, max_tokens))
 
 
+# --- Retrieval & chat tool-selection evals ---------------------------------------
+
+def load_search_eval_cases() -> dict:
+    text = (resources.files("newsletter_agent") / "eval_data" / "search_eval.json").read_text(encoding="utf-8")
+    return json.loads(text)
+
+
+def load_chat_tool_eval_cases() -> dict:
+    text = (resources.files("newsletter_agent") / "eval_data" / "chat_tools_eval.json").read_text(encoding="utf-8")
+    return json.loads(text)
+
+
+def score_retrieval_mode(queries: list[dict], retrieved_by_query: dict[str, list[str]]) -> dict:
+    """Compute Recall@3, Recall@5, MRR, and per-kind Recall@3 for one search mode."""
+    r3_hits, r5_hits, rr_sum = 0, 0, 0.0
+    by_kind: dict[str, list[int]] = {}
+    details = []
+    for item in queries:
+        qid = item["id"]
+        relevant = set(item["relevant_doc_ids"])
+        ranked = retrieved_by_query.get(qid, [])
+        top3 = ranked[:3]
+        top5 = ranked[:5]
+        hit3 = int(bool(relevant & set(top3)))
+        hit5 = int(bool(relevant & set(top5)))
+        rr = 0.0
+        for rank, doc_id in enumerate(ranked, start=1):
+            if doc_id in relevant:
+                rr = 1.0 / rank
+                break
+        r3_hits += hit3
+        r5_hits += hit5
+        rr_sum += rr
+        kind = item.get("kind", "other")
+        by_kind.setdefault(kind, []).append(hit3)
+        details.append({
+            "id": qid, "query": item["query"], "kind": kind,
+            "hit_at_3": bool(hit3), "reciprocal_rank": round(rr, 4), "top_3": top3,
+        })
+    total = len(queries) or 1
+    return {
+        "queries": len(queries),
+        "recall_at_3": round(r3_hits / total, 4),
+        "recall_at_5": round(r5_hits / total, 4),
+        "mrr": round(rr_sum / total, 4),
+        "by_kind_recall_at_3": {
+            kind: round(sum(vals) / len(vals), 4) for kind, vals in sorted(by_kind.items()) if vals
+        },
+        "details": details,
+    }
+
+
+def run_retrieval_eval(embedder=None) -> dict:
+    """Score lexical BM25, dense vector, and Hybrid RRF on the bundled synthetic retrieval set."""
+    from .search import HybridSearchIndex, OfflineEmbedder, SearchDocument, SearchMode
+
+    data = load_search_eval_cases()
+    active_embedder = embedder or OfflineEmbedder()
+    docs = [SearchDocument(**doc) for doc in data["documents"]]
+    queries = data["queries"]
+    modes: tuple[SearchMode, ...] = ("lexical", "vector", "hybrid")
+
+    with tempfile.TemporaryDirectory() as scratch:
+        store = InventoryStore(Path(scratch) / "inventory")
+        try:
+            index = HybridSearchIndex(store)
+            index.upsert_documents(docs, embedder=active_embedder)
+            scored_modes = {}
+            for mode in modes:
+                retrieved = {}
+                for item in queries:
+                    hits = index.search(
+                        item["query"],
+                        mode=mode,
+                        embedder=active_embedder,
+                        publication=item.get("publication"),
+                        limit=5,
+                        now_ms=int(EVAL_NOW.timestamp() * 1000),
+                    )
+                    retrieved[item["id"]] = [hit.doc_id for hit in hits]
+                scored_modes[mode] = score_retrieval_mode(queries, retrieved)
+        finally:
+            store.close()
+
+    return {
+        "embedder": active_embedder.model_name,
+        "documents": len(docs),
+        "queries": len(queries),
+        "modes": scored_modes,
+    }
+
+
+def run_chat_tool_eval() -> dict:
+    """Score deterministic tool selection, argument extraction, and prompt-injection safety."""
+    from .chat import TOOLS, plan_offline_tool_call
+
+    data = load_chat_tool_eval_cases()
+    cases = data["cases"]
+    declared_tools = {tool["name"] for tool in TOOLS}
+    known_pubs = [
+        "Byte Garden", "Field Notes Daily", "The Quiet Ledger",
+        "Orbit Weekly", "Pixel Forge", "Mapleleaf Coffee", "Trailhead Outfitters",
+    ]
+
+    tool_correct = 0
+    args_checked = 0
+    args_correct = 0
+    valid_tool_calls = 0
+    results = []
+
+    for item in cases:
+        chosen_tool, chosen_args = plan_offline_tool_call(item["question"], known_publications=known_pubs)
+        valid = chosen_tool in declared_tools
+        if valid:
+            valid_tool_calls += 1
+        right_tool = chosen_tool == item["expected_tool"]
+        if right_tool:
+            tool_correct += 1
+        expected_args = item.get("expected_args") or {}
+        right_args = True
+        if expected_args:
+            args_checked += 1
+            right_args = all(chosen_args.get(k) == v for k, v in expected_args.items())
+            if right_args:
+                args_correct += 1
+        results.append({
+            "id": item["id"],
+            "expected_tool": item["expected_tool"],
+            "predicted_tool": chosen_tool,
+            "tool_ok": right_tool,
+            "args_ok": right_args,
+            "valid_tool": valid,
+        })
+
+    total = len(cases) or 1
+    return {
+        "cases": len(cases),
+        "tool_accuracy": round(tool_correct / total, 4),
+        "arg_accuracy": round(args_correct / args_checked, 4) if args_checked else 1.0,
+        "valid_tool_rate": round(valid_tool_calls / total, 4),
+        "results": results,
+    }
+
+
 # --- Output -----------------------------------------------------------------------
 
 def range_text(values: dict | None) -> str:
@@ -509,6 +653,8 @@ def render_eval_html(result: dict) -> str:
 <ul class="notes">{mistakes}</ul>
 {render_hard_html(result.get('hard'))}
 {render_team_html(result.get('briefing_team'))}
+{render_retrieval_html(result.get('retrieval'))}
+{render_chat_tools_html(result.get('chat_tools'))}
 {render_repeated_html(result.get('repeated'), result)}
 <p class="muted small">"Not sent" means the privacy triage kept the email from the model. For personal email that is
 the right outcome and is not counted as a mistake.</p>
@@ -611,6 +757,55 @@ Fact-checker run: {escape(check['status'])}. Editor run: {escape(editor['status'
 """
 
 
+def render_retrieval_html(retrieval: dict | None) -> str:
+    if not retrieval:
+        return ""
+    modes = retrieval["modes"]
+    hybrid = modes["hybrid"]
+    rows = "".join(
+        f"<tr><td>{escape(label)}</td>"
+        f"<td class=\"num\">{percent(modes[key]['recall_at_3'])}</td>"
+        f"<td class=\"num\">{percent(modes[key]['recall_at_5'])}</td>"
+        f"<td class=\"num\">{modes[key]['mrr']:.3f}</td>"
+        f"<td class=\"num\">{percent(modes[key]['by_kind_recall_at_3'].get('lexical'))}</td>"
+        f"<td class=\"num\">{percent(modes[key]['by_kind_recall_at_3'].get('semantic'))}</td>"
+        f"<td class=\"num\">{percent(modes[key]['by_kind_recall_at_3'].get('hybrid'))}</td></tr>"
+        for key, label in (("lexical", "BM25 (FTS5)"), ("vector", "Vector cosine"), ("hybrid", "Hybrid RRF"))
+        if key in modes
+    )
+    return f"""
+<h2>Hybrid search retrieval</h2>
+<div class="cards">
+  {card(percent(hybrid['recall_at_3']), 'hybrid RRF Recall@3')}
+  {card(f"{hybrid['mrr']:.3f}", 'hybrid RRF MRR')}
+  {card(percent(modes['lexical']['recall_at_3']), 'BM25 lexical Recall@3')}
+  {card(percent(modes['vector']['recall_at_3']), 'vector-only Recall@3')}
+  {card(retrieval['queries'], 'eval queries')}
+</div>
+<div class="table-wrap"><table><thead><tr><th>Mode</th><th class="num">Recall@3</th><th class="num">Recall@5</th>
+<th class="num">MRR</th><th class="num">Lexical Qs</th><th class="num">Semantic Qs</th>
+<th class="num">Hybrid Qs</th></tr></thead><tbody>{rows}</tbody></table></div>
+<p class="muted small">Embedder: {escape(retrieval['embedder'])} over {retrieval['documents']} synthetic
+briefing bullets and subjects. Hybrid RRF fuses FTS5 BM25 and dense cosine ranks.</p>
+"""
+
+
+def render_chat_tools_html(chat_tools: dict | None) -> str:
+    if not chat_tools:
+        return ""
+    return f"""
+<h2>Chat agent tool selection</h2>
+<div class="cards">
+  {card(percent(chat_tools['tool_accuracy']), 'tool-selection accuracy')}
+  {card(percent(chat_tools['arg_accuracy']), 'argument extraction accuracy')}
+  {card(percent(chat_tools['valid_tool_rate']), 'valid declared tool calls')}
+  {card(chat_tools['cases'], 'agent routing cases')}
+</div>
+<p class="muted small">Tests routing across all four read-only tools (inventory overview, publication list,
+hybrid briefing search, and Gmail summarization) plus prompt-injection resistance.</p>
+"""
+
+
 def summary_lines(result: dict) -> list[str]:
     detection = result["subscription_detection"]
     lines = [
@@ -644,6 +839,19 @@ def summary_lines(result: dict) -> list[str]:
             f"(precision {percent(editor['precision'])}, "
             f"recall {percent(editor['recall'])}); {editor['shared_stories_found_exactly']} of "
             f"{editor['shared_stories']} shared stories grouped exactly")
+    retrieval = result.get("retrieval")
+    if retrieval:
+        modes = retrieval["modes"]
+        lines.append(
+            f"Retrieval ({retrieval['queries']} queries, {retrieval['embedder']}): "
+            f"Hybrid RRF Recall@3 {percent(modes['hybrid']['recall_at_3'])} (MRR {modes['hybrid']['mrr']:.3f}) vs "
+            f"BM25 {percent(modes['lexical']['recall_at_3'])} (MRR {modes['lexical']['mrr']:.3f}) vs "
+            f"Vector {percent(modes['vector']['recall_at_3'])} (MRR {modes['vector']['mrr']:.3f})")
+    chat_tools = result.get("chat_tools")
+    if chat_tools:
+        lines.append(
+            f"Chat tool selection ({chat_tools['cases']} cases): tool accuracy {percent(chat_tools['tool_accuracy'])}, "
+            f"args {percent(chat_tools['arg_accuracy'])}, valid tool rate {percent(chat_tools['valid_tool_rate'])}")
     repeated = result.get("repeated")
     if repeated and repeated["runs"] > 1:
         for name, summary in repeated["sets"].items():
@@ -724,6 +932,8 @@ def run_eval_command(real_model: bool = False, dataset: str | None = None, outpu
     if "hard" in per_set:
         result["hard"] = per_set["hard"][0]
     attach_team(result, teams[0])
+    result["retrieval"] = run_retrieval_eval()
+    result["chat_tools"] = run_chat_tool_eval()
     result["repeated"] = {
         "runs": runs,
         "sets": {name: aggregate_runs(cases, per_set[name]) for name, cases in sets.items()},

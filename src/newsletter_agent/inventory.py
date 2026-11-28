@@ -39,6 +39,9 @@ def finish_run(run: InventoryRun, demo: bool = False) -> dict:
     run.store.save_classifications()
     run.save_checkpoint()
     report = build_report(run)
+    from .search import HybridSearchIndex
+
+    HybridSearchIndex(run.store).index_inventory(report)
     if run.listing_complete:
         # Only a complete listing shows the full picture; never prune after a partial one.
         run.store.prune(run.state.window_end_ms, config.load_config()["retention_days"])

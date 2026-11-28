@@ -1,0 +1,295 @@
+{
+  "documents": [
+    {
+      "doc_id": "eval:ledger-rates",
+      "doc_type": "briefing_bullet",
+      "message_id": "ledger000",
+      "publication": "The Quiet Ledger",
+      "subject": "The Quiet Ledger: Rates hold steady as inflation cools",
+      "text": "Rates hold steady as inflation cools, easing pressure on mortgages and treasury yields.",
+      "received": "2026-06-01 08:00 UTC",
+      "internal_date": 1780300800000,
+      "briefing_date": "2026-06-01"
+    },
+    {
+      "doc_id": "eval:ledger-budgets",
+      "doc_type": "briefing_bullet",
+      "message_id": "ledger-long",
+      "publication": "The Quiet Ledger",
+      "subject": "The Quiet Ledger: The long read",
+      "text": "The long read on household budgets examines how ordinary savers rebalance monthly spending.",
+      "received": "2026-06-01 06:00 UTC",
+      "internal_date": 1780293600000,
+      "briefing_date": "2026-06-01"
+    },
+    {
+      "doc_id": "eval:ledger-bonds",
+      "doc_type": "issue_subject",
+      "message_id": "ledger002",
+      "publication": "The Quiet Ledger",
+      "subject": "The Quiet Ledger: The quiet return of bond ladders",
+      "text": "The Quiet Ledger: The quiet return of bond ladders for predictable treasury income.",
+      "received": "2026-05-18 08:00 UTC",
+      "internal_date": 1779091200000,
+      "briefing_date": ""
+    },
+    {
+      "doc_id": "eval:garden-editor",
+      "doc_type": "briefing_bullet",
+      "message_id": "garden000",
+      "publication": "Byte Garden",
+      "subject": "Byte Garden #120: A new open-source editor reaches 1.0",
+      "text": "A new open-source editor reaches 1.0 with faster syntax indexing and plugin sandboxing.",
+      "received": "2026-06-01 09:00 UTC",
+      "internal_date": 1780304400000,
+      "briefing_date": "2026-06-01"
+    },
+    {
+      "doc_id": "eval:garden-rust",
+      "doc_type": "briefing_bullet",
+      "message_id": "garden001",
+      "publication": "Byte Garden",
+      "subject": "Byte Garden #119: Rust adoption in embedded systems",
+      "text": "Rust adoption in embedded systems grows as teams replace legacy C firmware.",
+      "received": "2026-05-28 09:00 UTC",
+      "internal_date": 1779958800000,
+      "briefing_date": "2026-05-28"
+    },
+    {
+      "doc_id": "eval:garden-privacy",
+      "doc_type": "briefing_bullet",
+      "message_id": "garden002",
+      "publication": "Byte Garden",
+      "subject": "Byte Garden #118: Browser vendors agree on a privacy API",
+      "text": "Browser vendors agree on a privacy API to curb third-party tracking cookies.",
+      "received": "2026-05-24 09:00 UTC",
+      "internal_date": 1779613200000,
+      "briefing_date": "2026-05-24"
+    },
+    {
+      "doc_id": "eval:garden-gpus",
+      "doc_type": "briefing_bullet",
+      "message_id": "garden003",
+      "publication": "Byte Garden",
+      "subject": "Byte Garden #117: Cheaper GPUs change hobby AI",
+      "text": "Cheaper GPUs change hobby AI by making local model inference viable on desktop hardware.",
+      "received": "2026-05-20 09:00 UTC",
+      "internal_date": 1779267600000,
+      "briefing_date": "2026-05-20"
+    },
+    {
+      "doc_id": "eval:field-wetland",
+      "doc_type": "briefing_bullet",
+      "message_id": "field000",
+      "publication": "Field Notes Daily",
+      "subject": "Field Notes Daily: Wetland restoration shows early results",
+      "text": "Wetland restoration shows early results with rebounding amphibian and marsh bird counts.",
+      "received": "2026-06-01 07:30 UTC",
+      "internal_date": 1780299000000,
+      "briefing_date": "2026-06-01"
+    },
+    {
+      "doc_id": "eval:field-otters",
+      "doc_type": "briefing_bullet",
+      "message_id": "field-html",
+      "publication": "Field Notes Daily",
+      "subject": "Field Notes Daily: River otters return",
+      "text": "Volunteers counted river otters returning across three watershed rivers after cleanup work.",
+      "received": "2026-06-01 10:00 UTC",
+      "internal_date": 1780308000000,
+      "briefing_date": "2026-06-01"
+    },
+    {
+      "doc_id": "eval:field-heat",
+      "doc_type": "issue_subject",
+      "message_id": "field001",
+      "publication": "Field Notes Daily",
+      "subject": "Field Notes Daily: Citizen scientists map urban heat",
+      "text": "Field Notes Daily: Citizen scientists map urban heat islands across neighborhood blocks.",
+      "received": "2026-05-29 07:30 UTC",
+      "internal_date": 1780039800000,
+      "briefing_date": ""
+    },
+    {
+      "doc_id": "eval:field-drought",
+      "doc_type": "issue_subject",
+      "message_id": "field002",
+      "publication": "Field Notes Daily",
+      "subject": "Field Notes Daily: A dry spring for northern farms",
+      "text": "Field Notes Daily: A dry spring for northern farms delays planting and lowers soil moisture.",
+      "received": "2026-05-26 07:30 UTC",
+      "internal_date": 1779780600000,
+      "briefing_date": ""
+    },
+    {
+      "doc_id": "eval:orbit-sails",
+      "doc_type": "briefing_bullet",
+      "message_id": "orbit-injection",
+      "publication": "Orbit Weekly",
+      "subject": "Orbit Weekly: Reader mailbag",
+      "text": "Reader mailbag explains how solar sails use photon pressure for propellant-free deep-space travel.",
+      "received": "2026-06-01 05:00 UTC",
+      "internal_date": 1780290000000,
+      "briefing_date": "2026-06-01"
+    },
+    {
+      "doc_id": "eval:orbit-ice",
+      "doc_type": "briefing_bullet",
+      "message_id": "orbit000",
+      "publication": "Orbit Weekly",
+      "subject": "Orbit Weekly: A small lander finds water ice",
+      "text": "A small lunar lander confirms water ice deposits in permanently shadowed polar craters.",
+      "received": "2026-05-25 08:00 UTC",
+      "internal_date": 1779696000000,
+      "briefing_date": "2026-05-25"
+    },
+    {
+      "doc_id": "eval:orbit-launch",
+      "doc_type": "issue_subject",
+      "message_id": "orbit001",
+      "publication": "Orbit Weekly",
+      "subject": "Orbit Weekly: Launch costs keep falling",
+      "text": "Orbit Weekly: Reusable rockets keep lowering orbital launch costs for small satellites.",
+      "received": "2026-05-18 08:00 UTC",
+      "internal_date": 1779091200000,
+      "briefing_date": ""
+    },
+    {
+      "doc_id": "eval:forge-release",
+      "doc_type": "issue_subject",
+      "message_id": "forge000",
+      "publication": "Pixel Forge",
+      "subject": "What's new in Pixel Forge 4.0: release notes",
+      "text": "Pixel Forge 4.0 release notes: new export options, faster previews, and bug fixes.",
+      "received": "2026-05-30 11:00 UTC",
+      "internal_date": 1780138800000,
+      "briefing_date": ""
+    },
+    {
+      "doc_id": "eval:maple-coffee",
+      "doc_type": "issue_subject",
+      "message_id": "maple000",
+      "publication": "Mapleleaf Coffee",
+      "subject": "10% off single-origin beans this weekend",
+      "text": "Mapleleaf Coffee: 10% off single-origin beans this weekend with free shipping over $40.",
+      "received": "2026-05-31 11:00 UTC",
+      "internal_date": 1780225200000,
+      "briefing_date": ""
+    }
+  ],
+  "queries": [
+    {
+      "id": "q-exact-otters",
+      "query": "river otters three rivers",
+      "kind": "lexical",
+      "relevant_doc_ids": ["eval:field-otters"],
+      "note": "Exact entity + phrase lookup"
+    },
+    {
+      "id": "q-exact-forge",
+      "query": "Pixel Forge 4.0 export options",
+      "kind": "lexical",
+      "relevant_doc_ids": ["eval:forge-release"],
+      "note": "Exact product name and version number"
+    },
+    {
+      "id": "q-exact-coffee",
+      "query": "Mapleleaf single-origin beans discount",
+      "kind": "lexical",
+      "relevant_doc_ids": ["eval:maple-coffee"],
+      "note": "Exact brand and SKU match"
+    },
+    {
+      "id": "q-exact-ice",
+      "query": "water ice polar craters",
+      "kind": "lexical",
+      "publication": "Orbit Weekly",
+      "relevant_doc_ids": ["eval:orbit-ice"],
+      "note": "Lexical query with publication filter"
+    },
+    {
+      "id": "q-sem-central-bank",
+      "query": "central bank monetary policy and cpi",
+      "kind": "semantic",
+      "relevant_doc_ids": ["eval:ledger-rates"],
+      "note": "Zero exact keyword overlap with 'Rates hold steady as inflation cools'"
+    },
+    {
+      "id": "q-sem-propulsion",
+      "query": "spacecraft propulsion astronomy mission",
+      "kind": "semantic",
+      "relevant_doc_ids": ["eval:orbit-sails", "eval:orbit-ice", "eval:orbit-launch"],
+      "note": "Conceptual space propulsion match"
+    },
+    {
+      "id": "q-sem-habitat",
+      "query": "wildlife habitat conservation ecology",
+      "kind": "semantic",
+      "relevant_doc_ids": ["eval:field-wetland", "eval:field-otters"],
+      "note": "Zero exact keyword overlap with wetland restoration / otters"
+    },
+    {
+      "id": "q-sem-microcontroller",
+      "query": "microcontrollers programming compiler",
+      "kind": "semantic",
+      "relevant_doc_ids": ["eval:garden-rust", "eval:garden-editor"],
+      "note": "Semantic software/embedded match"
+    },
+    {
+      "id": "q-sem-local-llm",
+      "query": "affordable desktop machine learning compute chips",
+      "kind": "semantic",
+      "relevant_doc_ids": ["eval:garden-gpus"],
+      "note": "Conceptual AI hardware query"
+    },
+    {
+      "id": "q-sem-drought",
+      "query": "agriculture crops rainfall weather",
+      "kind": "semantic",
+      "relevant_doc_ids": ["eval:field-drought", "eval:field-heat"],
+      "note": "Conceptual climate/farming query"
+    },
+    {
+      "id": "q-hybrid-opensource",
+      "query": "opensource ide plugin",
+      "kind": "hybrid",
+      "relevant_doc_ids": ["eval:garden-editor"],
+      "note": "Compound word variation + exact keyword"
+    },
+    {
+      "id": "q-hybrid-privacy",
+      "query": "web tracking cookies standards",
+      "kind": "hybrid",
+      "relevant_doc_ids": ["eval:garden-privacy"],
+      "note": "Combines lexical 'tracking cookies' with semantic web privacy"
+    },
+    {
+      "id": "q-hybrid-savings",
+      "query": "personal savings household spending",
+      "kind": "hybrid",
+      "relevant_doc_ids": ["eval:ledger-budgets"],
+      "note": "Combines 'household spending' with semantic personal finance"
+    },
+    {
+      "id": "q-hybrid-bonds",
+      "query": "fixed income treasury ladders",
+      "kind": "hybrid",
+      "relevant_doc_ids": ["eval:ledger-bonds", "eval:ledger-rates"],
+      "note": "Combines 'treasury ladders' with monetary/finance concept"
+    },
+    {
+      "id": "q-exact-issue-num",
+      "query": "#120 plugin sandboxing",
+      "kind": "lexical",
+      "relevant_doc_ids": ["eval:garden-editor"],
+      "note": "Exact issue number and rare technical phrase"
+    },
+    {
+      "id": "q-exact-amphibian",
+      "query": "amphibian marsh",
+      "kind": "lexical",
+      "relevant_doc_ids": ["eval:field-wetland"],
+      "note": "Rare exact nouns without broad concept anchors"
+    }
+  ]
+}

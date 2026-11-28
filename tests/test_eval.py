@@ -377,3 +377,29 @@ def test_a_multi_run_result_never_replaces_a_single_run_from_the_same_day(tmp_pa
     assert cli.main(["eval", "--runs", "2", "--output", str(tmp_path)]) == 0
     names = sorted(path.name for path in tmp_path.glob("*.json"))
     assert len(names) == 2 and names[0].endswith("-2runs.json") and "runs" not in names[1]
+
+
+def test_retrieval_and_chat_tool_evals_score_and_save_in_eval_report(tmp_path, capsys):
+    from newsletter_agent.evaluate import run_chat_tool_eval, run_retrieval_eval
+
+    retrieval = run_retrieval_eval()
+    assert retrieval["queries"] >= 14
+    modes = retrieval["modes"]
+    assert set(modes) == {"lexical", "vector", "hybrid"}
+    assert modes["hybrid"]["recall_at_3"] >= modes["lexical"]["recall_at_3"]
+    assert modes["hybrid"]["recall_at_3"] >= 0.90
+    assert modes["hybrid"]["mrr"] >= 0.90
+
+    chat_tools = run_chat_tool_eval()
+    assert chat_tools["cases"] >= 10
+    assert chat_tools["tool_accuracy"] >= 0.90
+    assert chat_tools["valid_tool_rate"] == 1.0
+
+    assert cli.main(["eval", "--output", str(tmp_path)]) == 0
+    saved = json.loads(next(tmp_path.glob("offline-*.json")).read_text(encoding="utf-8"))
+    assert "retrieval" in saved and "chat_tools" in saved
+    output = capsys.readouterr().out
+    assert "Retrieval (" in output and "Chat tool selection (" in output
+    html = next(tmp_path.glob("offline-*.html")).read_text(encoding="utf-8")
+    assert "Hybrid search retrieval" in html and "Chat agent tool selection" in html
+

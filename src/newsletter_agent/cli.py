@@ -102,6 +102,23 @@ def command_chat(args) -> int:
     return run_chat()
 
 
+def command_search(args) -> int:
+    from .search import run_search_command
+
+    if args.days is not None and args.days < 1:
+        raise ValueError("--days must be at least 1")
+    if args.limit < 1:
+        raise ValueError("--limit must be at least 1")
+    return run_search_command(
+        query=args.query,
+        publication=args.publication,
+        days=args.days,
+        mode=args.mode,
+        limit=args.limit,
+        as_json=args.json,
+    )
+
+
 def command_brief(args) -> int:
     from .briefing import run_briefing_command
 
@@ -161,6 +178,16 @@ def build_parser() -> argparse.ArgumentParser:
     report.set_defaults(handler=command_report)
 
     commands.add_parser("chat", help="Ask questions about your newsletters").set_defaults(handler=command_chat)
+
+    search = commands.add_parser("search", help="Hybrid keyword + semantic search over indexed briefings and subjects")
+    search.add_argument("query", help="Topic, keyword, or question to search for")
+    search.add_argument("--publication", help="Filter to publications whose name contains this text")
+    search.add_argument("--days", type=int, help="Only search items from the last N days")
+    search.add_argument("--mode", choices=("hybrid", "lexical", "vector"), default="hybrid",
+                        help="Ranking mode (default: hybrid RRF)")
+    search.add_argument("--limit", type=int, default=8, help="Maximum results to show (default: 8)")
+    search.add_argument("--json", action="store_true", help="Print results as JSON")
+    search.set_defaults(handler=command_search)
 
     brief = commands.add_parser("brief", help="Summarize new newsletter issues")
     brief.add_argument("--yes", action="store_true", help="Approve OpenAI use without a prompt")

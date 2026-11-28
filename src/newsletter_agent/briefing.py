@@ -456,6 +456,9 @@ async def run_briefing(gmail, store: InventoryStore, settings: dict, directory: 
     window = (report["run"]["window_start_ms"], report["run"]["window_end_ms"])
     briefing = build_briefing(issues, summary, report, window, notes, team)
     briefing["path"] = str(save_briefing(briefing, directory, moment, demo))
+    from .search import HybridSearchIndex
+
+    HybridSearchIndex(store).index_briefing(briefing)
     if remember and briefing_succeeded(briefing):
         config.write_private_file(directory / "briefing_state.json",
                                   json.dumps({"last_success_end_ms": window[1]}))
