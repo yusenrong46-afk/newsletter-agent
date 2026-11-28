@@ -119,6 +119,12 @@ def command_search(args) -> int:
     )
 
 
+def command_ui(args) -> int:
+    from .server import run_ui_command
+
+    return run_ui_command(demo=args.demo, port=args.port, open_browser=not args.no_open)
+
+
 def command_brief(args) -> int:
     from .briefing import run_briefing_command
 
@@ -188,6 +194,13 @@ def build_parser() -> argparse.ArgumentParser:
     search.add_argument("--limit", type=int, default=8, help="Maximum results to show (default: 8)")
     search.add_argument("--json", action="store_true", help="Print results as JSON")
     search.set_defaults(handler=command_search)
+
+    ui = commands.add_parser("ui", help="Launch the local React Agent Workbench (127.0.0.1 only)")
+    ui.add_argument("--demo", action="store_true",
+                    help="Run with the synthetic mailbox and offline tool-calling agent (no accounts needed)")
+    ui.add_argument("--port", type=int, default=8765, help="Localhost port (default: 8765)")
+    ui.add_argument("--no-open", action="store_true", help="Do not open the browser automatically")
+    ui.set_defaults(handler=command_ui)
 
     brief = commands.add_parser("brief", help="Summarize new newsletter issues")
     brief.add_argument("--yes", action="store_true", help="Approve OpenAI use without a prompt")
